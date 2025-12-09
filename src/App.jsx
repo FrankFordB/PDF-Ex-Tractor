@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar'
 import DropzoneArea from './components/DropzoneArea'
 import ResultCard from './components/ResultCard'
 import Header from './components/Header'
+import WelcomeModal from './components/WelcomeModal'
 import useLocalStorage from './hooks/useLocalStorage'
 import { extractTextFromFile } from './utils/pdfReader'
 import * as XLSX from 'xlsx'
@@ -55,6 +56,7 @@ export default function App() {
   const [selectedIndex, setSelectedIndex] = useState(null)
   const [viewMode, setViewMode] = useState('enProceso')
   const [showResetModal, setShowResetModal] = useState(false)
+  const [showWelcome, setShowWelcome] = useLocalStorage('welcomeShown', false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light')
@@ -467,7 +469,10 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-slate-950">
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Welcome Modal */}
+      {!showWelcome && <WelcomeModal onClose={() => setShowWelcome(true)} />}
+      
       <Sidebar theme={theme} setTheme={setTheme} results={results} onSelect={setSelectedIndex} onViewChange={setViewMode} currentView={viewMode} selectedIndex={selectedIndex} />
       <main className="flex-1 p-4">
         <Header onExportAll={exportAllToExcel} />

@@ -19,7 +19,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded shadow mb-4 border border-gray-200 dark:border-slate-700">
+    <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded shadow mb-4 border border-gray-200 dark:border-gray-700">
       {/* Header con nombre de archivo y botón eliminar */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4">
         <div className="w-full sm:w-auto">
@@ -69,7 +69,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
           fieldValue !== 'error' && (
             <div
               key={fieldName}
-              className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 dark:bg-slate-700 p-2 sm:p-3 rounded border border-gray-200 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors gap-2 sm:gap-3"
+              className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 sm:p-3 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors gap-2 sm:gap-3"
             >
               <div className="flex-1 min-w-0 w-full">
                 <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
@@ -104,7 +104,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
       {/* Preview modal */}
       {showPreview && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg max-w-3xl w-full mx-4 p-6 overflow-auto max-h-[80vh]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-3xl w-full mx-4 p-6 overflow-auto max-h-[80vh]">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Previsualización</div>
@@ -119,7 +119,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
             <div className="mb-4 space-y-3">
               {Object.entries(item.extracted || {}).map(([k, v]) => (
                 v !== 'error' && (
-                  <div key={k} className="p-3 bg-gray-50 dark:bg-slate-700 rounded">
+                  <div key={k} className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
                     <div className="text-xs text-gray-500 uppercase">{k}</div>
                     <div className="text-sm font-mono mt-1 break-words">{v}</div>
                   </div>
@@ -129,7 +129,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
 
             <div className="mt-2">
               <div className="text-xs text-gray-500 mb-2">Texto extraído (raw):</div>
-              <pre className="text-sm whitespace-pre-wrap bg-gray-100 dark:bg-slate-700 p-3 rounded max-h-56 overflow-auto font-mono">{item.rawText || item.finalText}</pre>
+              <pre className="text-sm whitespace-pre-wrap bg-gray-100 dark:bg-gray-700 p-3 rounded max-h-56 overflow-auto font-mono">{item.rawText || item.finalText}</pre>
             </div>
           </div>
         </div>
