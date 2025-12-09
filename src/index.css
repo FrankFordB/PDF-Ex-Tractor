@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+:root {
+--bg: #f3f4f6;
+--card: #ffffff;
+--text: #111827;
+--muted: #6b7280;
+}
+
+
+[data-theme='dark'] {
+--bg: #0b1220;
+--card: #0f1724;
+--text: #e6eef8;
+--muted: #9ca3af;
+}
+
+
+body {
+background: var(--bg);
+color: var(--text);
+}
+
+
+/* algunas clases extra rápidas */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
