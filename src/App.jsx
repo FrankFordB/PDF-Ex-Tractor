@@ -48,7 +48,6 @@ const DEFAULT_FIELDS = [
 ]
 
 export default function App() {
-  const [theme, setTheme] = useLocalStorage('theme', 'light')
   const [fields, setFields] = useLocalStorage('fields', DEFAULT_FIELDS)
   const [results, setResults] = useLocalStorage('results', [])
   const [processing, setProcessing] = useState(false)
@@ -57,10 +56,6 @@ export default function App() {
   const [viewMode, setViewMode] = useState('enProceso')
   const [showResetModal, setShowResetModal] = useState(false)
   const [showWelcome, setShowWelcome] = useLocalStorage('welcomeShown', false)
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light')
-  }, [theme])
 
   /* -------------------------
      1. NORMALIZADOR GENERAL (Para Fechas, Importe, CAE)
@@ -288,11 +283,11 @@ export default function App() {
   }
 
   const extractBeneficiario = (text) => {
-    // Buscar la etiqueta "Beneficiario:" y capturar el nombre después
-    const m = text.match(/Beneficiario[:\s]*([A-ZÁÉÍÓÚÑ\s]{3,})/i)
-    if (m && m[1]) {
+    // Buscar la etiqueta "Beneficiario:" o "Afiliado:" y capturar el nombre después
+    const m = text.match(/(Beneficiario|Afiliado)[:\s]*([A-ZÁÉÍÓÚÑ\s]{3,})/i)
+    if (m && m[2]) {
       // Limpiar: tomar hasta el primer salto de línea o palabra clave
-      let nombre = m[1].trim()
+      let nombre = m[2].trim()
       const stopAt = nombre.search(/\n|DNI|CUIL|Domicilio|Condici[oó]n/i)
       if (stopAt > 0) {
         nombre = nombre.substring(0, stopAt).trim()
@@ -469,11 +464,11 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
       {/* Welcome Modal */}
       {!showWelcome && <WelcomeModal onClose={() => setShowWelcome(true)} />}
       
-      <Sidebar theme={theme} setTheme={setTheme} results={results} onSelect={setSelectedIndex} onViewChange={setViewMode} currentView={viewMode} selectedIndex={selectedIndex} />
+      <Sidebar results={results} onSelect={setSelectedIndex} onViewChange={setViewMode} currentView={viewMode} selectedIndex={selectedIndex} />
       <main className="flex-1 p-4">
         <Header onExportAll={exportAllToExcel} />
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -486,7 +481,7 @@ export default function App() {
                 ))}
             </div>
           </div>
-          <aside className="bg-white dark:bg-slate-800 p-4 rounded shadow h-fit">
+          <aside className="bg-white p-4 rounded shadow h-fit">
             <h4 className="font-bold mb-2">Campos</h4>
             <ul className="text-sm">{fields.map((f, i) => <li key={i}>• {f.name}</li>)}</ul>
             <button onClick={handleReset} className="mt-4 w-full bg-red-600 text-white p-2 rounded">Reiniciar</button>

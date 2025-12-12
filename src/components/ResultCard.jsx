@@ -19,16 +19,16 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded shadow mb-4 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white p-3 sm:p-4 rounded shadow mb-4 border border-gray-200">
       {/* Header con nombre de archivo y botón eliminar */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4">
         <div className="w-full sm:w-auto">
-          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{item.fileName}</div>
+          <div className="text-xs sm:text-sm text-gray-500 truncate">{item.fileName}</div>
           {item.extracted['error'] ? (
             <div className="text-red-600 font-semibold text-xs sm:text-sm mt-1">{item.extracted['error']}</div>
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-2">
-              <div className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base truncate">
+              <div className="font-semibold text-gray-800 text-sm sm:text-base truncate">
                 {item.extracted['Comp. Nro'] || item.extracted['CAE N°'] || 'Documento'}
               </div>
               <div className={`text-xs px-2 py-0.5 rounded-full w-fit ${item.status === 'Finalizada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -69,13 +69,13 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
           fieldValue !== 'error' && (
             <div
               key={fieldName}
-              className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 sm:p-3 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors gap-2 sm:gap-3"
+              className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 p-2 sm:p-3 rounded border border-gray-200 hover:bg-gray-100 transition-colors gap-2 sm:gap-3"
             >
               <div className="flex-1 min-w-0 w-full">
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                <div className="text-xs font-semibold text-gray-500 uppercase">
                   {fieldName}
                 </div>
-                <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 font-mono mt-1 break-all line-clamp-2">
+                <div className="text-xs sm:text-sm text-gray-800 font-mono mt-1 break-all line-clamp-2">
                   {fieldValue}
                 </div>
               </div>
@@ -104,10 +104,10 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
       {/* Preview modal */}
       {showPreview && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-3xl w-full mx-4 p-6 overflow-auto max-h-[80vh]">
+          <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full mx-4 p-6 overflow-auto max-h-[80vh]">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Previsualización</div>
+                <div className="text-sm text-gray-500">Previsualización</div>
                 <div className="font-semibold">{item.fileName}</div>
               </div>
               <div className="flex gap-2">
@@ -119,7 +119,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
             <div className="mb-4 space-y-3">
               {Object.entries(item.extracted || {}).map(([k, v]) => (
                 v !== 'error' && (
-                  <div key={k} className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div key={k} className="p-3 bg-gray-50 rounded">
                     <div className="text-xs text-gray-500 uppercase">{k}</div>
                     <div className="text-sm font-mono mt-1 break-words">{v}</div>
                   </div>
@@ -129,7 +129,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
 
             <div className="mt-2">
               <div className="text-xs text-gray-500 mb-2">Texto extraído (raw):</div>
-              <pre className="text-sm whitespace-pre-wrap bg-gray-100 dark:bg-gray-700 p-3 rounded max-h-56 overflow-auto font-mono">{item.rawText || item.finalText}</pre>
+              <pre className="text-sm whitespace-pre-wrap bg-gray-100 p-3 rounded max-h-56 overflow-auto font-mono">{item.rawText || item.finalText}</pre>
             </div>
           </div>
         </div>
