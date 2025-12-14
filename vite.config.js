@@ -4,14 +4,29 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    chunkSizeWarningLimit: 1000, // Aumentar límite a 1000kb
+    chunkSizeWarningLimit: 2000, // Aumentar límite a 2000kb (2MB)
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          'vendor-pdf': ['pdfjs-dist'],
-          'vendor-xlsx': ['xlsx']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('firebase')) {
+              return 'vendor-firebase'
+            }
+            if (id.includes('pdfjs-dist')) {
+              return 'vendor-pdf'
+            }
+            if (id.includes('xlsx')) {
+              return 'vendor-xlsx'
+            }
+            if (id.includes('tesseract')) {
+              return 'vendor-tesseract'
+            }
+            // Resto de dependencias
+            return 'vendor-others'
+          }
         }
       }
     }
