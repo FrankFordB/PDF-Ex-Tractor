@@ -1,8 +1,9 @@
 import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { createWorker } from 'tesseract.js'
 
-// Configurar el worker de PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+// Configurar el worker de PDF.js con el archivo local
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 // Helper: renderizar página a canvas y devolver canvas
 async function renderPageToCanvas(page, scale = 2) {
@@ -23,35 +24,44 @@ export async function extractTextFromFile(file, options = {}) {
   let wasDecrypted = false
   let pdf = null
 
-  // Intentar abrir el PDF, con soporte para prompt de contraseña si se requiere
+  // Intentar abrir el PDF
   try {
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
     pdf = await loadingTask.promise
   } catch (err) {
-    // Si pide contraseña, intentar con prompt si está disponible
-    isEncrypted = true
-    if (promptForPassword && typeof promptForPassword === 'function') {
-      let attempt = 0
-      let lastErr = err
-      while (attempt < maxPasswordAttempts) {
-        attempt++
-        const pw = await promptForPassword(file.name, { attempt })
-        if (!pw) break
-        try {
-          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, password: pw })
-          pdf = await loadingTask.promise
-          wasDecrypted = true
-          isEncrypted = false
-          break
-        } catch (e2) {
-          lastErr = e2
+    // Solo pedir contraseña si el error indica que está encriptado
+    const isPasswordError = err.name === 'PasswordException' || 
+                           err.message?.includes('password') || 
+                           err.message?.includes('encrypted')
+    
+    if (isPasswordError) {
+      isEncrypted = true
+      if (promptForPassword && typeof promptForPassword === 'function') {
+        let attempt = 0
+        let lastErr = err
+        while (attempt < maxPasswordAttempts) {
+          attempt++
+          const pw = await promptForPassword(file.name, { attempt })
+          if (!pw) break
+          try {
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, password: pw })
+            pdf = await loadingTask.promise
+            wasDecrypted = true
+            isEncrypted = false
+            break
+          } catch (e2) {
+            lastErr = e2
+          }
         }
-      }
-      if (!pdf) {
-        return { text: '', pages: [], isEncrypted: true, wasDecrypted: false, error: lastErr?.message || 'PDF encriptado' }
+        if (!pdf) {
+          return { text: '', pages: [], isEncrypted: true, wasDecrypted: false, error: lastErr?.message || 'PDF encriptado' }
+        }
+      } else {
+        return { text: '', pages: [], isEncrypted: true, wasDecrypted: false, error: err?.message || 'PDF encriptado' }
       }
     } else {
-      return { text: '', pages: [], isEncrypted: true, wasDecrypted: false, error: err?.message || 'PDF encriptado' }
+      // Si no es un error de contraseña, retornar el error directamente
+      return { text: '', pages: [], isEncrypted: false, wasDecrypted: false, error: err?.message || 'Error al abrir PDF' }
     }
   }
 

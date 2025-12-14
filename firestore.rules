@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función helper para verificar si es super admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'franco_burgoa1@hotmail.com';
+    }
+    
+    // Reglas para la colección de usuarios
+    match /users/{userId} {
+      // Permitir lectura al usuario autenticado O al super admin
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      
+      // Permitir creación cuando el usuario se registra
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Permitir actualización al propietario O al super admin
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      
+      // Solo admin puede eliminar
+      allow delete: if isAdmin();
+    }
+    
+    // Reglas para la colección de facturas/invoices
+    match /invoices/{invoiceId} {
+      // Solo el dueño puede leer sus facturas
+      allow read: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      // Solo el dueño puede crear facturas para sí mismo
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
+      
+      // Solo el dueño puede actualizar sus facturas
+      allow update: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      // Solo el dueño puede eliminar sus facturas
+      allow delete: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+    }
+    
+    // Denegar todo lo demás por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,28 +1,53 @@
-# PDF Extractor - FacturasRobadas 📄
+# PDF Extractor - PDF Ex-Tractor 📄
 
-Herramienta para extraer información de facturas PDF de forma automática. Extrae CAE, fechas, números de comprobante, CUIL y montos totales.
+Herramienta profesional para extraer información de facturas PDF de forma automática con sistema de autenticación y gestión de usuarios.
 
 ## 🚀 Características
 
 - ✨ Extracción automática de campos de facturas
-- 🔐 Soporte para PDFs encriptados (con contraseña)
-- 🤖 OCR fallback para PDFs escaneados
-- 📱 Diseño responsive (móvil, tablet, desktop)
-- 🌙 Modo oscuro/claro
+- 🔐 Sistema de autenticación con Firebase
+- 👥 Tres niveles de usuario (Guest, Gratis, Premium)
 - 📊 Exporta resultados a Excel
-- 🌐 Funciona 100% en el navegador (sin servidor)
+- 🔒 Datos seguros en Firestore
+- 🌐 Funciona en la nube con sincronización
+- 📱 Diseño responsive (móvil, tablet, desktop)
+- 🤖 OCR fallback para PDFs escaneados
+- 🔐 Soporte para PDFs encriptados (con contraseña)
+
+## 👥 Niveles de Usuario
+
+### Sin Registro (Guest)
+- ✅ 3 cargas de PDF gratis
+- ⚠️ Datos solo en navegador (localStorage)
+
+### Gratuito (Free Account)
+- ✅ 4 cargas de PDF
+- ✅ Guardado en la nube
+- ✅ Acceso desde cualquier dispositivo
+- ✅ Historial de facturas
+
+### Premium ($8.99 USD/mes)
+- ✅ **Cargas ilimitadas** de PDFs
+- ✅ Procesamiento prioritario
+- ✅ Soporte premium 24/7
+- ✅ Exportación avanzada
+- ✅ Sin publicidad
 
 ## 📋 Campos Extraídos
 
+- Beneficiario / Afiliado
+- DNI
 - CAE N°
 - Fecha de Vto. de CAE
-- Fecha de Emisión
+- Fecha de Emisión (calculada automáticamente)
 - Comp. Nro
 - CUIL
-- Razón Social
+- Apellido y Nombre / Razón Social
 - Importe Total
 
-## 🛠️ Instalación Local
+## 🔧 Configuración
+
+### 1. Instalación
 
 ```bash
 # Clonar o descargar el proyecto
@@ -30,11 +55,28 @@ cd pdf-extractor
 
 # Instalar dependencias
 npm install
+```
 
-# Ejecutar en desarrollo
+### 2. Configurar Firebase
+
+1. Lee [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) para instrucciones detalladas
+2. Copia `.env.example` a `.env`
+3. Completa tus credenciales de Firebase en `.env`
+
+```bash
+cp .env.example .env
+# Edita .env con tus credenciales
+```
+
+### 3. Desarrollo
+
+```bash
 npm run dev
+```
 
-# Compilar para producción
+### 4. Producción
+
+```bash
 npm run build
 ```
 

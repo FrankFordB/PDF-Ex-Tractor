@@ -15,7 +15,7 @@ export default function WelcomeModal({ onClose }) {
             ¡Bienvenido a PDF Extractor!
           </h2>
           <p className="text-sm text-gray-500">
-            Versión 1.05 Beta
+            Versión 1.10 Beta
           </p>
           <a className="text-sm text-blue-500" href="https://ar.linkedin.com/in/franco-burgoa-4a338514b">Desarrollado por Franco Burgoa</a>
         </div>

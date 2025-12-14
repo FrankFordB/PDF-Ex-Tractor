@@ -4,6 +4,13 @@ import DropzoneArea from './components/DropzoneArea'
 import ResultCard from './components/ResultCard'
 import Header from './components/Header'
 import WelcomeModal from './components/WelcomeModal'
+import LoginModal from './components/LoginModal'
+import RegisterModal from './components/RegisterModal'
+import UpgradeModal from './components/UpgradeModal'
+import GuestLimitModal from './components/GuestLimitModal'
+import UserSettingsModal from './components/UserSettingsModal'
+import AdminDashboard from './components/AdminDashboard'
+import { useAuth } from './contexts/AuthContext'
 import useLocalStorage from './hooks/useLocalStorage'
 import { extractTextFromFile } from './utils/pdfReader'
 import * as XLSX from 'xlsx'
@@ -48,14 +55,42 @@ const DEFAULT_FIELDS = [
 ]
 
 export default function App() {
+  const { 
+    user, 
+    userData, 
+    userInvoices,
+    canUploadPdf, 
+    incrementPdfCount,
+    saveInvoice,
+    updateInvoiceStatus,
+    deleteInvoice,
+    clearAllInvoices
+  } = useAuth()
+  
   const [fields, setFields] = useLocalStorage('fields', DEFAULT_FIELDS)
-  const [results, setResults] = useLocalStorage('results', [])
+  // Para usuarios invitados, usamos localStorage. Para usuarios logueados, usamos userInvoices de Firestore
+  const [guestResults, setGuestResults] = useLocalStorage('guestResults', [])
+  // Estado local temporal para mostrar resultados inmediatamente (antes de guardar en Firestore)
+  const [localResults, setLocalResults] = useState([])
   const [processing, setProcessing] = useState(false)
   const [newFieldName, setNewFieldName] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(null)
   const [viewMode, setViewMode] = useState('enProceso')
   const [showResetModal, setShowResetModal] = useState(false)
   const [showWelcome, setShowWelcome] = useLocalStorage('welcomeShown', false)
+  const [localPdfCount, setLocalPdfCount] = useState(0) // Contador local para forzar re-render
+  const [showLogin, setShowLogin] = useState(false)
+  const [showRegister, setShowRegister] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showGuestLimit, setShowGuestLimit] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [guestUploadCount, setGuestUploadCount] = useLocalStorage('guestUploads', 0)
+
+  // Usar resultados según si hay usuario o no
+  // Si hay usuario: combinar resultados locales (recién subidos) con los de Firestore
+  const results = user ? [...localResults, ...userInvoices] : guestResults
+  const setResults = user ? null : setGuestResults // Solo para invitados
 
   /* -------------------------
      1. NORMALIZADOR GENERAL (Para Fechas, Importe, CAE)
@@ -358,10 +393,26 @@ export default function App() {
   /* ---------------------------------------
      Process text result
      --------------------------------------- */
-  const processTextResult = (res, fileName, file) => {
+  const processTextResult = async (res, fileName, file) => {
     if (!res) return
     if (res.error) {
-      setResults((prev) => [{ fileName, extracted: { error: res.error }, finalText: `ERROR: ${res.error}`, status: 'Error' }, ...prev])
+      const errorData = { fileName, extracted: { error: res.error }, finalText: `ERROR: ${res.error}`, status: 'Error' }
+      if (user) {
+        // Mostrar error inmediatamente
+        setLocalResults((prev) => [errorData, ...prev])
+        // Guardar en Firestore en segundo plano
+        console.log('Guardando error en Firestore para:', fileName)
+        saveInvoice(errorData).then(result => {
+          if (result.success) {
+            console.log('Error guardado en Firestore, removiendo de localResults')
+            setLocalResults(prev => prev.filter(item => item.fileName !== fileName))
+          } else {
+            console.error('No se pudo guardar el error en Firestore:', result.error)
+          }
+        }).catch(err => console.error('Excepción guardando error en Firestore:', err))
+      } else {
+        setGuestResults((prev) => [errorData, ...prev])
+      }
       return
     }
 
@@ -412,12 +463,80 @@ export default function App() {
     let fileUrl = null
     try { if (file instanceof File) fileUrl = URL.createObjectURL(file) } catch (e) {}
 
-    setResults((prev) => [{ fileName, extracted, finalText, rawText: textGeneral, status: 'En proceso', fileUrl }, ...prev])
+    const invoiceData = { 
+      fileName, 
+      extracted, 
+      finalText, 
+      rawText: textGeneral, 
+      status: 'En proceso', 
+      fileUrl // Incluir fileUrl para preview (funcionará en sesión actual)
+    }
+
+    // Si hay usuario logueado
+    if (user) {
+      // 1. Primero mostrar localmente (inmediato)
+      setLocalResults((prev) => [invoiceData, ...prev])
+      
+      // 2. Luego guardar en Firestore en segundo plano
+      console.log('Intentando guardar en Firestore:', fileName)
+      saveInvoice(invoiceData).then(result => {
+        console.log('Resultado de saveInvoice:', result)
+        if (result.success) {
+          console.log('✅ Factura guardada exitosamente en Firestore:', fileName)
+          // Una vez guardado, remover del estado local (ya está en userInvoices)
+          setLocalResults(prev => prev.filter(item => item.fileName !== fileName))
+        } else {
+          console.error('❌ Error guardando en Firestore:', result.error)
+          alert(`Error guardando ${fileName}: ${result.error}\n\n⚠️ IMPORTANTE: Debes publicar las reglas de Firestore en Firebase Console para que los datos se guarden permanentemente.\n\nVe a Firebase Console → Firestore Database → Reglas y publica las reglas de seguridad.`)
+        }
+      }).catch(err => {
+        console.error('❌ Excepción guardando en Firestore:', err)
+        alert(`Error guardando ${fileName}: ${err.message}\n\n⚠️ IMPORTANTE: Debes publicar las reglas de Firestore en Firebase Console.`)
+      })
+    } else {
+      // Usuario invitado: guardar en localStorage
+      setGuestResults((prev) => [invoiceData, ...prev])
+    }
   }
 
   const handleFiles = async (files) => {
+    // Verificar límites antes de procesar
+    const filesToProcess = files.length
+    
+    // Usuario no logueado: límite de 3 PDFs
+    if (!user) {
+      const totalAfterUpload = guestUploadCount + filesToProcess
+      if (totalAfterUpload > 3) {
+        setShowGuestLimit(true)
+        return
+      }
+    }
+    
+    // Usuario free: verificar límite antes de empezar
+    if (user && userData?.accountType === 'free') {
+      const currentCount = localPdfCount || userData?.pdfUploaded || 0
+      console.log(`🔍 Verificando límite: ${currentCount}/5`)
+      if (currentCount >= 5) {
+        console.log('⛔ LÍMITE ALCANZADO - Mostrando modal')
+        setShowUpgrade(true)
+        return
+      }
+    }
+    
     setProcessing(true)
+    let tempCount = localPdfCount || userData?.pdfUploaded || 0
+    
     for (const file of files) {
+      // Verificar límite ANTES de procesar cada archivo
+      if (user && userData?.accountType === 'free') {
+        if (tempCount >= 5) {
+          console.log(`⛔ Límite alcanzado durante loop: ${tempCount}/5`)
+          setShowUpgrade(true)
+          setProcessing(false)
+          return
+        }
+      }
+      
       try {
         const res = await extractTextFromFile(file, {
           promptForPassword: async (fileName, { attempt }) => prompt(`Contraseña para ${fileName}:`),
@@ -425,36 +544,100 @@ export default function App() {
           useOCR: true,
           ocrLang: 'spa'
         })
-        processTextResult(res, file.name, file)
+        await processTextResult(res, file.name, file)
+        
+        // Incrementar contador DESPUÉS de procesar exitosamente
+        if (!user) {
+          setGuestUploadCount(prev => prev + 1)
+        } else {
+          await incrementPdfCount()
+          tempCount++
+          setLocalPdfCount(tempCount) // Actualizar estado local
+          console.log(`✅ PDF procesado. Contador: ${tempCount}/5`)
+        }
       } catch (err) {
-        setResults((prev) => [{ fileName: file.name, extracted: { error: 'Error' }, finalText: 'Error' }, ...prev])
+        const errorData = { fileName: file.name, extracted: { error: 'Error' }, finalText: 'Error', status: 'En proceso' }
+        if (user) {
+          await saveInvoice(errorData)
+        } else {
+          setGuestResults((prev) => [errorData, ...prev])
+        }
       }
     }
     setProcessing(false)
   }
 
-  const handleToggleStatus = (idx) => {
-    setResults(prev => {
-        const c = [...prev]; 
-        if(c[idx]) c[idx].status = c[idx].status === 'Finalizada' ? 'En proceso' : 'Finalizada'
+  const handleToggleStatus = async (idx) => {
+    const invoice = results[idx]
+    if (!invoice) return
+    
+    const newStatus = invoice.status === 'Finalizada' ? 'En proceso' : 'Finalizada'
+    
+    if (user) {
+      // Usuario logueado
+      if (invoice.id) {
+        // Factura ya guardada en Firestore
+        await updateInvoiceStatus(invoice.id, newStatus)
+      } else {
+        // Factura todavía en localResults (esperando guardarse)
+        setLocalResults(prev => {
+          const c = [...prev]
+          if(c[idx]) c[idx] = { ...c[idx], status: newStatus }
+          return c
+        })
+      }
+    } else {
+      // Usuario invitado: actualizar localStorage
+      setGuestResults(prev => {
+        const c = [...prev]
+        if(c[idx]) c[idx] = { ...c[idx], status: newStatus }
         return c
-    })
+      })
+    }
   }
   const handleSelect = (index) => {
     setSelectedIndex(index)
     setTimeout(() => document.getElementById(`result-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
   }
-  const handleDelete = (index) => setResults(prev => prev.filter((_, i) => i !== index))
+  const handleDelete = async (index) => {
+    const invoice = results[index]
+    if (!invoice) return
+    
+    if (user) {
+      // Usuario logueado
+      if (invoice.id) {
+        // Factura ya guardada en Firestore
+        await deleteInvoice(invoice.id)
+      } else {
+        // Factura todavía en localResults (esperando guardarse)
+        setLocalResults(prev => prev.filter((_, i) => i !== index))
+      }
+    } else {
+      // Usuario invitado: eliminar de localStorage
+      setGuestResults(prev => prev.filter((_, i) => i !== index))
+    }
+  }
   const handleReset = () => { 
     setShowResetModal(true)
   }
 
-  const confirmReset = () => {
-    setResults([])
-    localStorage.clear()
-    location.reload()
+  const confirmReset = async () => {
+    if (user) {
+      // Usuario logueado: limpiar facturas de Firestore y localResults
+      setLocalResults([])
+      await clearAllInvoices()
+    } else {
+      // Usuario invitado: limpiar localStorage
+      setGuestResults([])
+    }
+    setShowResetModal(false)
   }
+  
   const exportAllToExcel = () => {
+    if (!user) {
+      setShowLogin(true)
+      return
+    }
     if (!results.length) return
     const rows = results.map(r => ({ fileName: r.fileName, ...r.extracted }))
     const ws = XLSX.utils.json_to_sheet(rows)
@@ -468,23 +651,164 @@ export default function App() {
       {/* Welcome Modal */}
       {!showWelcome && <WelcomeModal onClose={() => setShowWelcome(true)} />}
       
+      {/* Auth Modals */}
+      {showLogin && (
+        <LoginModal 
+          onClose={() => setShowLogin(false)}
+          onSwitchToRegister={() => {
+            setShowLogin(false)
+            setShowRegister(true)
+          }}
+        />
+      )}
+      
+      {showRegister && (
+        <RegisterModal 
+          onClose={() => setShowRegister(false)}
+          onSwitchToLogin={() => {
+            setShowRegister(false)
+            setShowLogin(true)
+          }}
+        />
+      )}
+      
+      {/* Upgrade Modal */}
+      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      
+      {/* Guest Limit Modal */}
+      {showGuestLimit && (
+        <GuestLimitModal 
+          uploadCount={guestUploadCount}
+          onClose={() => setShowGuestLimit(false)}
+          onShowRegister={() => {
+            setShowGuestLimit(false)
+            setShowRegister(true)
+          }}
+        />
+      )}
+      
       <Sidebar results={results} onSelect={setSelectedIndex} onViewChange={setViewMode} currentView={viewMode} selectedIndex={selectedIndex} />
       <main className="flex-1 p-4">
-        <Header onExportAll={exportAllToExcel} />
+        <Header 
+          onShowLogin={() => setShowLogin(true)}
+          onShowRegister={() => setShowRegister(true)}
+          onShowUpgrade={() => setShowUpgrade(true)}
+          onShowSettings={() => setShowSettings(true)}
+          onShowAdmin={() => setShowAdmin(true)}
+        />
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
-            <DropzoneArea onFiles={handleFiles} />
+            <DropzoneArea 
+              onFiles={handleFiles} 
+              disabled={user && userData?.accountType === 'free' && (localPdfCount >= 5 || (userData?.pdfUploaded || 0) >= 5)}
+              onDisabledClick={() => setShowUpgrade(true)}
+            />
+            
+            {/* Info de límites para usuarios no premium */}
+            {!user && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <i className="fa-solid fa-info-circle mr-2"></i>
+                  Sin registro: {Math.max(0, 3 - guestUploadCount)} PDFs restantes de 3.{' '}
+                  <button 
+                    onClick={() => setShowRegister(true)}
+                    className="underline font-medium hover:text-blue-900"
+                  >
+                    Regístrate gratis para 5 PDFs por semana
+                  </button>
+                </p>
+              </div>
+            )}
+            
+            {/* Mensaje para usuarios FREE */}
+            {user && userData?.accountType === 'free' && (
+              <>
+                {(userData?.pdfUploaded || 0) >= 5 ? (
+                  <div 
+                    onClick={() => setShowUpgrade(true)}
+                    className="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg cursor-pointer hover:from-yellow-100 hover:to-orange-100 transition-all shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3">
+                      <i className="fa-solid fa-crown text-2xl text-yellow-500 mt-1"></i>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">
+                          ¡Alcanzaste el máximo de cuentas gratuitas!
+                        </p>
+                        <p className="text-xs text-gray-700 mt-1">
+                          Pásate a Premium y ahorra hasta 10 minutos por factura con extracción ilimitada
+                        </p>
+                        <p className="text-xs text-blue-600 font-semibold mt-2">
+                          Haz click aquí para actualizar →
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      <i className="fa-solid fa-exclamation-triangle mr-2"></i>
+                      Cuenta gratuita: {Math.max(0, 5 - (userData?.pdfUploaded || 0))} PDFs restantes de 5.{' '}
+                      <button 
+                        onClick={() => setShowUpgrade(true)}
+                        className="underline font-medium hover:text-yellow-900"
+                      >
+                        Actualiza a Premium para cargas ilimitadas
+                      </button>
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {user && userData?.accountType === 'premium' && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg">
+                <p className="text-sm text-gray-800">
+                  <i className="fa-solid fa-crown text-yellow-500 mr-2"></i>
+                  <strong>Cuenta Premium</strong> - Cargas ilimitadas disponibles
+                </p>
+              </div>
+            )}
+            
+            {user && userData?.role === 'reina' && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-300 rounded-lg">
+                <p className="text-sm text-gray-800">
+                  <i className="fa-solid fa-crown text-pink-500 mr-2"></i>
+                  <strong className="text-pink-700">👑 Reina</strong> - Privilegios especiales permanentes
+                </p>
+              </div>
+            )}
+            
             <div className="mt-6">
                 {processing && <p className="text-blue-600">Procesando...</p>}
                 {results.filter(r => viewMode==='finalizadas'?r.status==='Finalizada':r.status!=='Finalizada').map((r, i) => (
-                    <div key={i} id={`result-${i}`}><ResultCard item={r} index={i} onDelete={handleDelete} onToggleStatus={() => handleToggleStatus(i)} highlighted={selectedIndex===i}/></div>
+                    <div key={i} id={`result-${i}`}><ResultCard item={r} index={i} onDelete={handleDelete} onToggleStatus={() => handleToggleStatus(i)} highlighted={selectedIndex===i} isGuest={!user} onShowLogin={() => setShowLogin(true)}/></div>
                 ))}
             </div>
           </div>
           <aside className="bg-white p-4 rounded shadow h-fit">
             <h4 className="font-bold mb-2">Campos</h4>
             <ul className="text-sm">{fields.map((f, i) => <li key={i}>• {f.name}</li>)}</ul>
-            <button onClick={handleReset} className="mt-4 w-full bg-red-600 text-white p-2 rounded">Reiniciar</button>
+            <button 
+              onClick={exportAllToExcel} 
+              className={`mt-4 w-full text-white p-2 rounded transition-colors flex items-center justify-center gap-2 ${
+                !user 
+                  ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+            >
+              {!user ? (
+                <>
+                  <i className="fa-solid fa-lock"></i>
+                  Exportar Excel
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-file-excel"></i>
+                  Exportar Excel
+                </>
+              )}
+            </button>
+            <button onClick={handleReset} className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white p-2 rounded transition-colors">Reiniciar App</button>
           </aside>
         </div>
       </main>
@@ -515,6 +839,16 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de configuración de usuario */}
+      {showSettings && (
+        <UserSettingsModal onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* Dashboard de Administración */}
+      {showAdmin && (
+        <AdminDashboard onClose={() => setShowAdmin(false)} />
       )}
     </div>
   )

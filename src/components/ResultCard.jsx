@@ -1,10 +1,14 @@
 import React, { useState } from 'react'
 
-export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, index, highlighted }) {
+export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, index, highlighted, isGuest = false, onShowLogin }) {
   const [copiedField, setCopiedField] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
 
   const handleCopyField = (fieldName, fieldValue) => {
+    if (isGuest) {
+      onShowLogin && onShowLogin()
+      return
+    }
     navigator.clipboard.writeText(fieldValue)
     if (onCopy) onCopy(fieldValue)
     setCopiedField(fieldName)
@@ -12,14 +16,36 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
   }
 
   const handleCopyAll = () => {
+    if (isGuest) {
+      onShowLogin && onShowLogin()
+      return
+    }
     navigator.clipboard.writeText(item.finalText)
     if (onCopy) onCopy(item.finalText)
     setCopiedField('all')
     // No usar setTimeout - mantener el estado hasta que copie otro campo
   }
 
+  const handleValueClick = () => {
+    if (isGuest && onShowLogin) {
+      onShowLogin()
+    }
+  }
+
   return (
-    <div className="bg-white p-3 sm:p-4 rounded shadow mb-4 border border-gray-200">
+    <div className="bg-white p-3 sm:p-4 rounded shadow mb-4 border border-gray-200 relative">
+      {/* Banner superior clickeable para usuarios invitados */}
+      {isGuest && (
+        <div className="mb-4 -mt-3 -mx-3 sm:-mx-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-t cursor-pointer hover:from-blue-700 hover:to-purple-700 transition-all" onClick={onShowLogin}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <i className="fa-solid fa-lock text-lg"></i>
+              <span className="text-sm font-semibold">Regístrate gratis para copiar y exportar</span>
+            </div>
+            <i className="fa-solid fa-arrow-right"></i>
+          </div>
+        </div>
+      )}
       {/* Header con nombre de archivo y botón eliminar */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4">
         <div className="w-full sm:w-auto">
@@ -49,9 +75,28 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
             <span className="hidden sm:inline">Ver</span>
           </button>
           <button
-            onClick={() => onToggleStatus && onToggleStatus(item.fileName)}
-            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1 rounded text-white text-xs sm:text-sm font-medium transition-all ${item.status === 'Finalizada' ? 'bg-green-500 hover:bg-gray-600' : 'bg-green-600 hover:bg-green-700'}`}>
-            {item.status === 'Finalizada' ? 'En Proc.' : 'Final.'}
+            onClick={() => {
+              if (isGuest) {
+                onShowLogin && onShowLogin()
+                return
+              }
+              onToggleStatus && onToggleStatus(item.fileName)
+            }}
+            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1 rounded text-white text-xs sm:text-sm font-medium transition-all ${
+              isGuest 
+                ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
+                : item.status === 'Finalizada' 
+                  ? 'bg-green-500 hover:bg-gray-600' 
+                  : 'bg-green-600 hover:bg-green-700'
+            }`}>
+            {isGuest ? (
+              <>
+                <i className="fa-solid fa-lock mr-1"></i>
+                Final.
+              </>
+            ) : (
+              item.status === 'Finalizada' ? 'En Proc.' : 'Final.'
+            )}
           </button>
           
           <button
@@ -69,25 +114,31 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
           fieldValue !== 'error' && (
             <div
               key={fieldName}
-              className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 p-2 sm:p-3 rounded border border-gray-200 hover:bg-gray-100 transition-colors gap-2 sm:gap-3"
+              onClick={handleValueClick}
+              className={`flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 p-2 sm:p-3 rounded border border-gray-200 hover:bg-gray-100 transition-colors gap-2 sm:gap-3 ${isGuest ? 'select-none cursor-pointer hover:border-blue-300' : ''}`}
             >
               <div className="flex-1 min-w-0 w-full">
                 <div className="text-xs font-semibold text-gray-500 uppercase">
                   {fieldName}
                 </div>
-                <div className="text-xs sm:text-sm text-gray-800 font-mono mt-1 break-all line-clamp-2">
+                <div className={`text-xs sm:text-sm text-gray-800 font-mono mt-1 break-all line-clamp-2 ${isGuest ? 'select-none' : ''}`}>
                   {fieldValue}
                 </div>
               </div>
               <button
-                onClick={() => handleCopyField(fieldName, fieldValue)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopyField(fieldName, fieldValue)
+                }}
                 className={`w-full sm:w-auto px-3 py-1 sm:py-2 rounded text-white text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 min-w-[70px] ${
-                  copiedField === fieldName
+                  isGuest 
+                    ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+                    : copiedField === fieldName
                     ? 'bg-green-500 hover:bg-green-600'
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {copiedField === fieldName ? '✓' : 'Copiar'}
+                {isGuest ? <><i className="fa-solid fa-lock mr-1"></i>Copiar</> : copiedField === fieldName ? '✓' : 'Copiar'}
               </button>
             </div>
           )
@@ -97,7 +148,13 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
       {/* Botón copiar todo */}
       <button
         onClick={handleCopyAll}
-        className={`w-full px-4 py-2 rounded text-white font-medium text-xs sm:text-sm ${copiedField === 'all' ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-600 hover:bg-blue-700'} ${highlighted ? 'ring-2 ring-blue-400' : ''}`}
+        className={`w-full px-4 py-2 rounded text-white font-medium text-xs sm:text-sm ${
+          isGuest
+            ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+            : copiedField === 'all' 
+            ? 'bg-green-500 hover:bg-green-600' 
+            : 'bg-blue-600 hover:bg-blue-700'
+        } ${highlighted ? 'ring-2 ring-blue-400' : ''}`}
       >
         {copiedField === 'all' ? '✓ Copiado todo' : 'Copiar Todo'}
       </button>
