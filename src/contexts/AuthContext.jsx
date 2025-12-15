@@ -262,6 +262,7 @@ export const AuthProvider = ({ children }) => {
       await updateDoc(userRef, {
         accountType: 'premium',
         maxPdfLimit: -1,
+        premiumGrantedBy: 'admin', // Marcar como regalo del admin
         subscriptionDate: now.toISOString(),
         subscriptionEndDate: endDate.toISOString(),
         updatedAt: now.toISOString()
@@ -269,6 +270,26 @@ export const AuthProvider = ({ children }) => {
       return { success: true }
     } catch (error) {
       console.error('Error setting premium days:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  const cancelPremium = async (userId) => {
+    if (!isAdmin()) return { success: false, error: 'No autorizado' }
+    
+    try {
+      const userRef = doc(db, 'users', userId)
+      await updateDoc(userRef, {
+        accountType: 'free',
+        maxPdfLimit: 5,
+        premiumGrantedBy: null,
+        subscriptionDate: null,
+        subscriptionEndDate: null,
+        updatedAt: new Date().toISOString()
+      })
+      return { success: true }
+    } catch (error) {
+      console.error('Error cancelando premium:', error)
       return { success: false, error: error.message }
     }
   }
@@ -503,7 +524,8 @@ export const AuthProvider = ({ children }) => {
     getAllUsers,
     updateUserSubscription,
     updateUserRole,
-    setPremiumDays
+    setPremiumDays,
+    cancelPremium
   }
 
   return (

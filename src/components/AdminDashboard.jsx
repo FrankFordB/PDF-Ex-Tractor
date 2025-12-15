@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function AdminDashboard({ onClose }) {
-  const { getAllUsers, updateUserSubscription, updateUserRole, setPremiumDays, isAdmin } = useAuth()
+  const { getAllUsers, updateUserSubscription, updateUserRole, setPremiumDays, cancelPremium, isAdmin } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, free, premium
@@ -54,6 +54,19 @@ export default function AdminDashboard({ onClose }) {
       setMessage({ type: 'success', text: `✅ Premium asignado por ${days} días` })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
       setEditingUser(null)
+      loadUsers()
+    } else {
+      setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
+    }
+  }
+
+  const handleCancelPremium = async (userId) => {
+    if (!confirm('¿Estás seguro de cancelar el premium de este usuario?')) return
+    
+    const result = await cancelPremium(userId)
+    if (result.success) {
+      setMessage({ type: 'success', text: '✅ Premium cancelado' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
       loadUsers()
     } else {
       setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
@@ -340,12 +353,12 @@ export default function AdminDashboard({ onClose }) {
                               </button>
                             ) : (
                               <button
-                                onClick={() => handleUpdateSubscription(user.id, 'free')}
-                                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded transition-colors"
-                                title="Degradar a Free"
+                                onClick={() => handleCancelPremium(user.id)}
+                                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors"
+                                title="Cancelar Premium y quitar días"
                               >
-                                <i className="fa-solid fa-arrow-down mr-1"></i>
-                                Free
+                                <i className="fa-solid fa-times mr-1"></i>
+                                Cancelar
                               </button>
                             )}
                             <button
