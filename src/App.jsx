@@ -843,7 +843,7 @@ export default function App() {
             {(!user || userData?.accountType === 'free') && (
               <div className="border-t border-gray-200 pt-4">
                 <AdBanner 
-                  slot="9578186043" 
+                  slot="7039652613" 
                   format="vertical"
                   style={{ minHeight: '250px' }}
                 />
