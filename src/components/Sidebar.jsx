@@ -101,7 +101,7 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 					<>
 						<div className="mt-4 border-t border-gray-200 pt-4">
 							<AdBanner 
-								slot="1234567890" 
+								slot="9578186043" 
 								format="auto"
 								style={{ minHeight: '90px' }}
 							/>
@@ -109,7 +109,7 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 						
 						<div className="mt-4">
 							<AdBanner 
-								slot="2345678901" 
+								slot="6109714326" 
 								format="auto"
 								style={{ minHeight: '90px' }}
 							/>
