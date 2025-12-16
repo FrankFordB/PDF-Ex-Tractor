@@ -242,10 +242,19 @@ export const AuthProvider = ({ children }) => {
   const updateUserRole = async (userId, role) => {
     try {
       const userRef = doc(db, 'users', userId)
-      await updateDoc(userRef, {
+      const updateData = {
         role: role,
         updatedAt: new Date().toISOString()
-      })
+      }
+      
+      // Si el rol es reina, automáticamente dar premium permanente
+      if (role === 'reina') {
+        updateData.accountType = 'premium'
+        updateData.maxPdfLimit = -1
+        updateData.premiumGrantedBy = 'admin'
+      }
+      
+      await updateDoc(userRef, updateData)
       return { success: true }
     } catch (error) {
       console.error('Error updating role:', error)
@@ -290,6 +299,62 @@ export const AuthProvider = ({ children }) => {
       return { success: true }
     } catch (error) {
       console.error('Error cancelando premium:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  const deleteUser = async (userId) => {
+    if (!isAdmin()) return { success: false, error: 'No autorizado' }
+    
+    try {
+      await deleteDoc(doc(db, 'users', userId))
+      return { success: true }
+    } catch (error) {
+      console.error('Error eliminando usuario:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  const updateUserProfileByAdmin = async (userId, profileData) => {
+    if (!isAdmin()) return { success: false, error: 'No autorizado' }
+    
+    try {
+      await setDoc(doc(db, 'users', userId), {
+        ...profileData,
+        updatedAt: new Date().toISOString()
+      }, { merge: true })
+      return { success: true }
+    } catch (error) {
+      console.error('Error actualizando perfil:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  const createUserByAdmin = async (userData) => {
+    if (!isAdmin()) return { success: false, error: 'No autorizado' }
+    
+    try {
+      const now = new Date()
+      const userRef = doc(collection(db, 'users'))
+      await setDoc(userRef, {
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        country: userData.country || '',
+        state: userData.state || '',
+        city: userData.city || '',
+        phone: userData.phone || '',
+        accountType: userData.role === 'reina' ? 'premium' : (userData.accountType || 'free'),
+        role: userData.role || 'user',
+        pdfUploaded: 0,
+        maxPdfLimit: userData.role === 'reina' ? -1 : (userData.accountType === 'premium' ? -1 : 5),
+        weekStartDate: now.toISOString(),
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString()
+      })
+      return { success: true, userId: userRef.id }
+    } catch (error) {
+      console.error('Error creando usuario:', error)
       return { success: false, error: error.message }
     }
   }
@@ -469,7 +534,10 @@ export const AuthProvider = ({ children }) => {
       querySnapshot.forEach((doc) => {
         users.push({ id: doc.id, ...doc.data() })
       })
-      return { success: true, users }
+      return { su,
+    deleteUser,
+    updateUserProfileByAdmin,
+    createUserByAdminccess: true, users }
     } catch (error) {
       console.error('Error obteniendo usuarios:', error)
       return { success: false, error: error.message }

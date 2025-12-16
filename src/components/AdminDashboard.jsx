@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function AdminDashboard({ onClose }) {
-  const { getAllUsers, updateUserSubscription, updateUserRole, setPremiumDays, cancelPremium, isAdmin } = useAuth()
+  const { getAllUsers, updateUserSubscription, updateUserRole, setPremiumDays, cancelPremium, deleteUser, updateUserProfileByAdmin, createUserByAdmin, isAdmin } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, free, premium
@@ -10,6 +10,8 @@ export default function AdminDashboard({ onClose }) {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [editingUser, setEditingUser] = useState(null)
   const [premiumDaysInput, setPremiumDaysInput] = useState(30)
+  const [showCreateUser, setShowCreateUser] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(null)
 
   useEffect(() => {
     loadUsers()
@@ -67,6 +69,43 @@ export default function AdminDashboard({ onClose }) {
     if (result.success) {
       setMessage({ type: 'success', text: '✅ Premium cancelado' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      loadUsers()
+    } else {
+      setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
+    }
+  }
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('⚠️ ¿Estás SEGURO de eliminar este usuario? Esta acción NO se puede deshacer.')) return
+    
+    const result = await deleteUser(userId)
+    if (result.success) {
+      setMessage({ type: 'success', text: '✅ Usuario eliminado' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      loadUsers()
+    } else {
+      setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
+    }
+  }
+
+  const handleUpdateProfile = async (userId, profileData) => {
+    const result = await updateUserProfileByAdmin(userId, profileData)
+    if (result.success) {
+      setMessage({ type: 'success', text: '✅ Perfil actualizado' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      setEditingProfile(null)
+      loadUsers()
+    } else {
+      setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
+    }
+  }
+
+  const handleCreateUser = async (userData) => {
+    const result = await createUserByAdmin(userData)
+    if (result.success) {
+      setMessage({ type: 'success', text: '✅ Usuario creado exitosamente' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      setShowCreateUser(false)
       loadUsers()
     } else {
       setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
@@ -208,6 +247,13 @@ export default function AdminDashboard({ onClose }) {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              <button
+                onClick={() => setShowCreateUser(true)}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
+              >
+                <i className="fa-solid fa-plus mr-2"></i>
+                Nuevo Usuario
+              </button>
             </div>
             
             <div className="flex gap-2">
@@ -341,11 +387,11 @@ export default function AdminDashboard({ onClose }) {
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-2">
                           {/* Gestión de Plan */}
-                          <div className="flex gap-2">
+                          <div className="flex gap-1">
                             {user.accountType === 'free' ? (
                               <button
                                 onClick={() => handleUpdateSubscription(user.id, 'premium')}
-                                className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded transition-colors"
+                                className="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded transition-colors"
                                 title="Actualizar a Premium"
                               >
                                 <i className="fa-solid fa-arrow-up mr-1"></i>
@@ -354,7 +400,7 @@ export default function AdminDashboard({ onClose }) {
                             ) : (
                               <button
                                 onClick={() => handleCancelPremium(user.id)}
-                                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors"
+                                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors"
                                 title="Cancelar Premium y quitar días"
                               >
                                 <i className="fa-solid fa-times mr-1"></i>
@@ -363,11 +409,26 @@ export default function AdminDashboard({ onClose }) {
                             )}
                             <button
                               onClick={() => setEditingUser(user)}
-                              className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition-colors"
+                              className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors"
                               title="Configurar días de premium"
                             >
                               <i className="fa-solid fa-calendar mr-1"></i>
                               Días
+                            </button>
+                            <button
+                              onClick={() => setEditingProfile(user)}
+                              className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors"
+                              title="Editar perfil completo"
+                            >
+                              <i className="fa-solid fa-edit mr-1"></i>
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="px-2 py-1 bg-gray-700 hover:bg-gray-800 text-white text-xs rounded transition-colors"
+                              title="Eliminar usuario"
+                            >
+                              <i className="fa-solid fa-trash mr-1"></i>
                             </button>
                           </div>
                           
@@ -463,6 +524,23 @@ export default function AdminDashboard({ onClose }) {
           </div>
         )}
 
+        {/* Modal para editar perfil completo */}
+        {editingProfile && (
+          <EditProfileModal
+            user={editingProfile}
+            onSave={handleUpdateProfile}
+            onClose={() => setEditingProfile(null)}
+          />
+        )}
+
+        {/* Modal para crear nuevo usuario */}
+        {showCreateUser && (
+          <CreateUserModal
+            onSave={handleCreateUser}
+            onClose={() => setShowCreateUser(false)}
+          />
+        )}
+
         {/* Footer */}
         <div className="sticky bottom-0 bg-gray-50 border-t p-4">
           <div className="flex justify-between items-center">
@@ -477,6 +555,279 @@ export default function AdminDashboard({ onClose }) {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Modal para editar perfil completo
+function EditProfileModal({ user, onSave, onClose }) {
+  const [formData, setFormData] = useState({
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    country: user.country || '',
+    state: user.state || '',
+    city: user.city || ''
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave(user.id, formData)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">
+          <i className="fa-solid fa-user-edit mr-2 text-purple-600"></i>
+          Editar Perfil Completo
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+              <input
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">País</label>
+              <input
+                type="text"
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Provincia/Estado</label>
+              <input
+                type="text"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ciudad</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-6">
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            >
+              <i className="fa-solid fa-save mr-2"></i>
+              Guardar Cambios
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Modal para crear nuevo usuario
+function CreateUserModal({ onSave, onClose }) {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    country: '',
+    state: '',
+    city: '',
+    accountType: 'free',
+    role: 'user'
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">
+          <i className="fa-solid fa-user-plus mr-2 text-green-600"></i>
+          Crear Nuevo Usuario
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Apellido <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">País</label>
+              <input
+                type="text"
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Provincia/Estado</label>
+              <input
+                type="text"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ciudad</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Cuenta <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.accountType}
+                onChange={(e) => setFormData({ ...formData, accountType: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                required
+              >
+                <option value="free">Free</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rol <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                required
+              >
+                <option value="user">👤 Usuario</option>
+                <option value="admin">🛡️ Admin</option>
+                <option value="reina">👑 Reina (Premium Auto)</option>
+              </select>
+            </div>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+            <p className="text-sm text-blue-800">
+              <i className="fa-solid fa-info-circle mr-2"></i>
+              <strong>Nota:</strong> Si seleccionas el rol "Reina", el usuario automáticamente tendrá Premium de por vida.
+            </p>
+          </div>
+          <div className="flex gap-3 mt-6">
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            >
+              <i className="fa-solid fa-check mr-2"></i>
+              Crear Usuario
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
