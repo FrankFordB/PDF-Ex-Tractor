@@ -117,7 +117,7 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 						
 						<div className="mt-4">
 							<AdBanner 
-								slot="3456789012" 
+								slot="6768189872" 
 								format="auto"
 								style={{ minHeight: '90px' }}
 							/>
