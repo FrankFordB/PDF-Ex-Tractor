@@ -16,7 +16,8 @@
     "firebase-admin": "^12.0.0",
     "firebase-functions": "^5.0.0",
     "mercadopago": "^2.0.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "@sendgrid/mail": "^8.1.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.1.0"

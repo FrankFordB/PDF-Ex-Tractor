@@ -10,6 +10,7 @@ import UpgradeModal from './components/UpgradeModal'
 import GuestLimitModal from './components/GuestLimitModal'
 import UserSettingsModal from './components/UserSettingsModal'
 import AdminDashboard from './components/AdminDashboard'
+import ConfirmModal from './components/ConfirmModal'
 import { useAuth } from './contexts/AuthContext'
 import useLocalStorage from './hooks/useLocalStorage'
 import { extractTextFromFile } from './utils/pdfReader'
@@ -85,6 +86,7 @@ export default function App() {
   const [showGuestLimit, setShowGuestLimit] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'error' })
   const [guestUploadCount, setGuestUploadCount] = useLocalStorage('guestUploads', 0)
 
   // Usar resultados según si hay usuario o no
@@ -487,11 +489,21 @@ export default function App() {
           setLocalResults(prev => prev.filter(item => item.fileName !== fileName))
         } else {
           console.error('❌ Error guardando en Firestore:', result.error)
-          alert(`Error guardando ${fileName}: ${result.error}\n\n⚠️ IMPORTANTE: Debes publicar las reglas de Firestore en Firebase Console para que los datos se guarden permanentemente.\n\nVe a Firebase Console → Firestore Database → Reglas y publica las reglas de seguridad.`)
+          setAlertModal({
+            isOpen: true,
+            title: '⚠️ Error al Guardar',
+            message: `Error guardando ${fileName}: ${result.error}\n\n⚠️ IMPORTANTE: Debes publicar las reglas de Firestore en Firebase Console para que los datos se guarden permanentemente.\n\nVe a Firebase Console → Firestore Database → Reglas y publica las reglas de seguridad.`,
+            type: 'error'
+          })
         }
       }).catch(err => {
         console.error('❌ Excepción guardando en Firestore:', err)
-        alert(`Error guardando ${fileName}: ${err.message}\n\n⚠️ IMPORTANTE: Debes publicar las reglas de Firestore en Firebase Console.`)
+        setAlertModal({
+          isOpen: true,
+          title: '⚠️ Error al Guardar',
+          message: `Error guardando ${fileName}: ${err.message}\n\n⚠️ IMPORTANTE: Debes publicar las reglas de Firestore en Firebase Console.`,
+          type: 'error'
+        })
       })
     } else {
       // Usuario invitado: guardar en localStorage
@@ -850,6 +862,18 @@ export default function App() {
       {showAdmin && (
         <AdminDashboard onClose={() => setShowAdmin(false)} />
       )}
+
+      {/* Modal de Alerta */}
+      <ConfirmModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onConfirm={() => setAlertModal({ ...alertModal, isOpen: false })}
+        onCancel={() => setAlertModal({ ...alertModal, isOpen: false })}
+        showCancel={false}
+        confirmText="Entendido"
+      />
     </div>
   )
 }

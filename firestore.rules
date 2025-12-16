@@ -3,23 +3,54 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // Función helper para verificar si es super admin
-    function isAdmin() {
+    function isSuperAdmin() {
       return request.auth != null && request.auth.token.email == 'franco_burgoa1@hotmail.com';
+    }
+    
+    // Función helper para verificar si tiene rol de admin o reina
+    function isRoleAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'reina');
+    }
+    
+    // Función helper que combina super admin y role admin
+    function isAdmin() {
+      return isSuperAdmin() || isRoleAdmin();
     }
     
     // Reglas para la colección de usuarios
     match /users/{userId} {
-      // Permitir lectura al usuario autenticado O al super admin
+      // Permitir lectura al usuario autenticado O a cualquier admin/reina
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
-      // Permitir creación cuando el usuario se registra
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Permitir creación cuando el usuario se registra O cuando es admin
+      allow create: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
-      // Permitir actualización al propietario O al super admin
-      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Permitir actualización al propietario O a cualquier admin/reina
+      // PERO: El super admin (franco_burgoa1@hotmail.com) solo puede modificarse a sí mismo
+      allow update: if request.auth != null && 
+        (request.auth.uid == userId || 
+         (isAdmin() && resource.data.email != 'franco_burgoa1@hotmail.com'));
       
-      // Solo admin puede eliminar
-      allow delete: if isAdmin();
+      // Admin y reina pueden eliminar usuarios, EXCEPTO al super admin
+      allow delete: if isAdmin() && resource.data.email != 'franco_burgoa1@hotmail.com';
+    }
+    
+    // Reglas para la colección de notificaciones premium
+    match /premiumNotifications/{notificationId} {
+      // Solo super admin puede leer todas las notificaciones
+      allow read: if isSuperAdmin();
+      
+      // Admin y reina pueden crear notificaciones
+      allow create: if isAdmin();
+      
+      // Solo super admin puede actualizar (marcar como leída)
+      allow update: if isSuperAdmin();
+      
+      // Solo super admin puede eliminar
+      allow delete: if isSuperAdmin();
     }
     
     // Reglas para la colección de facturas/invoices

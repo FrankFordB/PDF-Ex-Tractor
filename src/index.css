@@ -27,3 +27,28 @@ color: var(--text);
 
 /* algunas clases extra rápidas */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Animaciones para modales */
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}

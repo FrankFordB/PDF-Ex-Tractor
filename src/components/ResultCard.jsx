@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
+import ConfirmModal from './ConfirmModal'
 
 export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, index, highlighted, isGuest = false, onShowLogin }) {
   const [copiedField, setCopiedField] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'info' })
 
   const handleCopyField = (fieldName, fieldValue) => {
     if (isGuest) {
@@ -66,8 +68,16 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <button
             onClick={() => {
-              if (item.fileUrl) window.open(item.fileUrl, '_blank', 'noopener,noreferrer')
-              else alert('No hay archivo disponible para previsualizar en otra pestaña.')
+              if (item.fileUrl) {
+                window.open(item.fileUrl, '_blank', 'noopener,noreferrer')
+              } else {
+                setAlertModal({
+                  isOpen: true,
+                  title: '⚠️ Archivo No Disponible',
+                  message: 'No hay archivo disponible para previsualizar en otra pestaña.\n\nEl archivo PDF original no está asociado a esta extracción.',
+                  type: 'warning'
+                })
+              }
             }}
             title="Previsualizar PDF real"
             className="flex-1 sm:flex-none px-2 sm:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2">
@@ -191,6 +201,18 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
           </div>
         </div>
       )}
+
+      {/* Modal de Alerta */}
+      <ConfirmModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onConfirm={() => setAlertModal({ ...alertModal, isOpen: false })}
+        onCancel={() => setAlertModal({ ...alertModal, isOpen: false })}
+        showCancel={false}
+        confirmText="Entendido"
+      />
     </div>
   )
 }

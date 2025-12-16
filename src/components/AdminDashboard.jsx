@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import ConfirmModal from './ConfirmModal'
 
 export default function AdminDashboard({ onClose }) {
-  const { getAllUsers, updateUserSubscription, updateUserRole, setPremiumDays, cancelPremium, deleteUser, updateUserProfileByAdmin, createUserByAdmin, isAdmin } = useAuth()
+  const { getAllUsers, updateUserSubscription, updateUserRole, setPremiumDays, cancelPremium, deleteUser, updateUserProfileByAdmin, createUserByAdmin, isAdmin, isSuperAdmin, getPremiumNotifications, markNotificationAsRead, removePremiumGrantedByAdmin } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, free, premium
@@ -12,9 +13,15 @@ export default function AdminDashboard({ onClose }) {
   const [premiumDaysInput, setPremiumDaysInput] = useState(30)
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [editingProfile, setEditingProfile] = useState(null)
+  const [notifications, setNotifications] = useState([])
+  const [activeTab, setActiveTab] = useState('users') // users o notifications
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })
 
   useEffect(() => {
     loadUsers()
+    if (isSuperAdmin()) {
+      loadNotifications()
+    }
   }, [])
 
   const loadUsers = async () => {
@@ -28,7 +35,27 @@ export default function AdminDashboard({ onClose }) {
     setLoading(false)
   }
 
+  const loadNotifications = async () => {
+    console.log('🔔 Cargando notificaciones...')
+    const result = await getPremiumNotifications()
+    console.log('📬 Resultado notificaciones:', result)
+    if (result.success) {
+      setNotifications(result.notifications)
+      console.log(`✅ ${result.notifications.length} notificaciones cargadas`)
+    } else {
+      console.error('❌ Error cargando notificaciones:', result.error)
+      setMessage({ type: 'error', text: `Error cargando notificaciones: ${result.error}` })
+    }
+  }
+
   const handleUpdateSubscription = async (userId, newType) => {
+    // Si se está actualizando a premium, abrir modal para configurar días
+    if (newType === 'premium') {
+      const userToEdit = users.find(u => u.id === userId)
+      setEditingUser(userToEdit)
+      return
+    }
+    
     const result = await updateUserSubscription(userId, newType)
     if (result.success) {
       setMessage({ type: 'success', text: '✅ Suscripción actualizada' })
@@ -42,8 +69,18 @@ export default function AdminDashboard({ onClose }) {
   const handleUpdateRole = async (userId, newRole) => {
     const result = await updateUserRole(userId, newRole)
     if (result.success) {
-      setMessage({ type: 'success', text: '✅ Rol actualizado' })
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      let successMessage = '✅ Rol actualizado'
+      
+      if (newRole === 'admin') {
+        successMessage = '✅ Usuario promovido a ADMIN con Premium de por vida 🛡️'
+      } else if (newRole === 'reina') {
+        successMessage = '✅ Usuario promovido a REINA con Premium de por vida 👑'
+      } else if (newRole === 'usuario' || newRole === 'user') {
+        successMessage = '⚠️ Usuario cambiado a ROL NORMAL - Premium y privilegios removidos'
+      }
+      
+      setMessage({ type: 'success', text: successMessage })
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000)
       loadUsers()
     } else {
       setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
@@ -63,7 +100,19 @@ export default function AdminDashboard({ onClose }) {
   }
 
   const handleCancelPremium = async (userId) => {
-    if (!confirm('¿Estás seguro de cancelar el premium de este usuario?')) return
+    setConfirmModal({
+      isOpen: true,
+      title: '¿Cancelar Premium?',
+      message: '¿Estás seguro de que deseas cancelar el premium de este usuario?\n\nEl usuario volverá al plan gratuito inmediatamente.',
+      type: 'warning',
+      onConfirm: () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        executeCancelPremium(userId)
+      }
+    })
+  }
+
+  const executeCancelPremium = async (userId) => {
     
     const result = await cancelPremium(userId)
     if (result.success) {
@@ -76,7 +125,19 @@ export default function AdminDashboard({ onClose }) {
   }
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('⚠️ ¿Estás SEGURO de eliminar este usuario? Esta acción NO se puede deshacer.')) return
+    setConfirmModal({
+      isOpen: true,
+      title: '⚠️ Eliminar Usuario',
+      message: '¿Estás SEGURO de eliminar este usuario?\n\n⚠️ ADVERTENCIA: Esta acción NO se puede deshacer.\n\nSe eliminarán todos sus datos permanentemente.',
+      type: 'error',
+      onConfirm: () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        executeDeleteUser(userId)
+      }
+    })
+  }
+
+  const executeDeleteUser = async (userId) => {
     
     const result = await deleteUser(userId)
     if (result.success) {
@@ -112,6 +173,67 @@ export default function AdminDashboard({ onClose }) {
     }
   }
 
+  const handleRemovePremium = async (userId, notificationId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remover Premium',
+      message: '¿Deseas remover el premium otorgado por admin/reina a este usuario?\n\nEl usuario perderá inmediatamente sus beneficios premium.',
+      type: 'warning',
+      onConfirm: () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        executeRemovePremium(userId, notificationId)
+      }
+    })
+  }
+
+  const executeRemovePremium = async (userId, notificationId) => {
+    
+    const result = await removePremiumGrantedByAdmin(userId, notificationId)
+    if (result.success) {
+      setMessage({ type: 'success', text: '✅ Premium removido exitosamente' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      loadUsers()
+      loadNotifications()
+    } else {
+      setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
+    }
+  }
+
+  const handleMarkAsRead = async (notificationId) => {
+    await markNotificationAsRead(notificationId)
+    loadNotifications()
+  }
+
+  const handleDeleteNotification = async (notificationId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Notificación',
+      message: '¿Estás seguro de eliminar esta notificación?\n\nEsta acción no se puede deshacer.',
+      type: 'warning',
+      onConfirm: () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        executeDeleteNotification(notificationId)
+      }
+    })
+  }
+
+  const executeDeleteNotification = async (notificationId) => {
+    
+    try {
+      // Importar deleteDoc desde firebase/firestore si no está ya
+      const { deleteDoc, doc } = await import('firebase/firestore')
+      const { db } = await import('../config/firebase')
+      
+      await deleteDoc(doc(db, 'premiumNotifications', notificationId))
+      setMessage({ type: 'success', text: '✅ Notificación eliminada' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      loadNotifications()
+    } catch (error) {
+      console.error('Error eliminando notificación:', error)
+      setMessage({ type: 'error', text: `❌ Error: ${error.message}` })
+    }
+  }
+
   const getRemainingDays = (endDate) => {
     if (!endDate) return null
     const end = new Date(endDate)
@@ -121,7 +243,7 @@ export default function AdminDashboard({ onClose }) {
     return days > 0 ? days : 0
   }
 
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = (users || []).filter(u => {
     const matchesFilter = filter === 'all' || u.accountType === filter
     const matchesSearch = 
       u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,10 +253,10 @@ export default function AdminDashboard({ onClose }) {
   })
 
   const stats = {
-    total: users.length,
-    free: users.filter(u => u.accountType === 'free').length,
-    premium: users.filter(u => u.accountType === 'premium').length,
-    revenue: users.filter(u => u.accountType === 'premium').length * 9200 // ARS por mes
+    total: (users || []).length,
+    free: (users || []).filter(u => u.accountType === 'free').length,
+    premium: (users || []).filter(u => u.accountType === 'premium').length,
+    revenue: (users || []).filter(u => u.accountType === 'premium').length * 9200 // ARS por mes
   }
 
   if (!isAdmin()) {
@@ -247,13 +369,48 @@ export default function AdminDashboard({ onClose }) {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <button
-                onClick={() => setShowCreateUser(true)}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
-              >
-                <i className="fa-solid fa-plus mr-2"></i>
-                Nuevo Usuario
-              </button>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => setShowCreateUser(true)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
+                >
+                  <i className="fa-solid fa-plus mr-2"></i>
+                  Nuevo Usuario
+                </button>
+                
+                {/* Botones de Pestañas - Solo para Super Admin */}
+                {isSuperAdmin() && (
+                  <>
+                    <button
+                      onClick={() => setActiveTab('users')}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        activeTab === 'users'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      <i className="fa-solid fa-users mr-2"></i>
+                      Control de Usuarios
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('notifications')}
+                      className={`relative px-4 py-2 rounded-lg font-medium transition-all ${
+                        activeTab === 'notifications'
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      <i className="fa-solid fa-bell mr-2"></i>
+                      Notificaciones
+                      {notifications.filter(n => !n.read).length > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                          {notifications.filter(n => !n.read).length}
+                        </span>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             
             <div className="flex gap-2">
@@ -299,8 +456,9 @@ export default function AdminDashboard({ onClose }) {
           )}
         </div>
 
-        {/* Users Table */}
-        <div className="p-6 max-h-96 overflow-y-auto">
+        {/* Contenido Central - Cambia según la pestaña activa */}
+        {activeTab === 'users' ? (
+          <div className="p-6 max-h-96 overflow-y-auto">
           {loading ? (
             <div className="text-center py-12">
               <i className="fa-solid fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
@@ -432,11 +590,13 @@ export default function AdminDashboard({ onClose }) {
                             </button>
                           </div>
                           
-                          {/* Gestión de Roles */}
+                          {/* Gestión de Roles - Solo Super Admin */}
                           <select
                             value={user.role || 'user'}
                             onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                            className="text-xs px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                            disabled={!isSuperAdmin()}
+                            className={`text-xs px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 ${!isSuperAdmin() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
+                            title={!isSuperAdmin() ? 'Solo el Super Admin puede cambiar roles' : 'Cambiar rol del usuario'}
                           >
                             <option value="user">👤 Usuario</option>
                             <option value="admin">🛡️ Admin</option>
@@ -451,6 +611,222 @@ export default function AdminDashboard({ onClose }) {
             </div>
           )}
         </div>
+        ) : (
+          <div className="p-6 max-h-96 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <i className="fa-solid fa-inbox text-6xl text-gray-300 mb-4"></i>
+                <p className="text-xl text-gray-500 font-medium">No hay notificaciones</p>
+                <p className="text-gray-400 mt-2">Aquí aparecerán cuando Admin o Reina otorguen premium</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {notifications.map((notif) => {
+                  // Función helper para obtener el icono y color según el tipo
+                  const getNotificationStyle = () => {
+                    switch(notif.type) {
+                      case 'premium_granted':
+                        return {
+                          icon: '✨',
+                          borderColor: 'border-green-500',
+                          bgColor: 'bg-green-50',
+                          title: 'Premium Otorgado'
+                        }
+                      case 'premium_cancelled':
+                        return {
+                          icon: '❌',
+                          borderColor: 'border-red-500',
+                          bgColor: 'bg-red-50',
+                          title: 'Premium Cancelado'
+                        }
+                      case 'role_changed':
+                        return {
+                          icon: '🔄',
+                          borderColor: 'border-blue-500',
+                          bgColor: 'bg-blue-50',
+                          title: 'Rol Modificado'
+                        }
+                      case 'profile_modified':
+                        return {
+                          icon: '✏️',
+                          borderColor: 'border-yellow-500',
+                          bgColor: 'bg-yellow-50',
+                          title: 'Perfil Modificado'
+                        }
+                      default:
+                        return {
+                          icon: '📋',
+                          borderColor: 'border-gray-500',
+                          bgColor: 'bg-gray-50',
+                          title: 'Notificación'
+                        }
+                    }
+                  }
+
+                  const style = getNotificationStyle()
+                  const actionBy = notif.actionByRole || notif.grantedByRole
+
+                  return (
+                    <div
+                      key={notif.id}
+                      className={`bg-white rounded-lg shadow-sm p-6 border-l-4 ${
+                        notif.read 
+                          ? 'border-gray-300' 
+                          : style.borderColor + ' shadow-md'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-3xl">{style.icon}</span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-lg text-gray-900">
+                                  {style.title}
+                                </span>
+                                {!notif.read && (
+                                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-bold animate-pulse">
+                                    NUEVO
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                {actionBy === 'reina' ? '👑' : actionBy === 'super_admin' ? '⭐' : '🛡️'} 
+                                {' '}{notif.actionByName || notif.grantedByName} - {notif.actionByEmail || notif.grantedByEmail}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className={`${style.bgColor} rounded-lg p-4 space-y-2`}>
+                            {/* Información del usuario afectado */}
+                            <p className="flex items-center gap-2">
+                              <i className="fa-solid fa-user text-purple-500"></i>
+                              <span className="text-gray-600">Usuario afectado:</span>
+                              <strong className="text-gray-900">{notif.targetUserName}</strong>
+                            </p>
+                            <p className="flex items-center gap-2 ml-6">
+                              <i className="fa-solid fa-envelope text-blue-500"></i>
+                              <span className="text-sm text-gray-600">{notif.targetUserEmail}</span>
+                            </p>
+
+                            {/* Contenido específico según el tipo */}
+                            {notif.type === 'premium_granted' && (
+                              <>
+                                <p className="flex items-center gap-2">
+                                  <i className="fa-solid fa-calendar text-green-500"></i>
+                                  <span className="text-gray-600">Duración:</span>
+                                  <strong className="text-green-700">{notif.days} días</strong>
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-gray-200">
+                                  <p className="text-sm text-gray-500">
+                                    <i className="fa-solid fa-clock mr-1"></i>
+                                    Inicio: {new Date(notif.startDate).toLocaleString('es-ES')}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    <i className="fa-solid fa-hourglass-end mr-1"></i>
+                                    Vence: {new Date(notif.endDate).toLocaleDateString('es-ES')}
+                                  </p>
+                                </div>
+                              </>
+                            )}
+
+                            {notif.type === 'premium_cancelled' && (
+                              <p className="flex items-center gap-2">
+                                <i className="fa-solid fa-ban text-red-500"></i>
+                                <span className="text-gray-600">Premium cancelado</span>
+                                <span className="text-sm text-gray-500 ml-auto">
+                                  {new Date(notif.createdAt).toLocaleString('es-ES')}
+                                </span>
+                              </p>
+                            )}
+
+                            {notif.type === 'role_changed' && (
+                              <>
+                                <p className="flex items-center gap-2">
+                                  <i className="fa-solid fa-exchange-alt text-blue-500"></i>
+                                  <span className="text-gray-600">Rol:</span>
+                                  <span className="font-medium text-gray-700">{notif.previousRole}</span>
+                                  <span className="text-gray-400">→</span>
+                                  <strong className="text-blue-700">{notif.newRole}</strong>
+                                </p>
+                                {notif.privilegesRemoved && (
+                                  <p className="flex items-center gap-2 text-red-600 font-medium">
+                                    <i className="fa-solid fa-arrow-down"></i>
+                                    Se removieron privilegios de administrador
+                                  </p>
+                                )}
+                                {notif.privilegesGranted && (
+                                  <p className="flex items-center gap-2 text-green-600 font-medium">
+                                    <i className="fa-solid fa-arrow-up"></i>
+                                    Se otorgaron privilegios de administrador
+                                  </p>
+                                )}
+                              </>
+                            )}
+
+                            {notif.type === 'profile_modified' && notif.changes && (
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-gray-700">
+                                  <i className="fa-solid fa-list text-yellow-500 mr-2"></i>
+                                  Cambios realizados:
+                                </p>
+                                {notif.changes.map((change, idx) => (
+                                  <p key={idx} className="text-sm text-gray-600 ml-6">
+                                    • {change}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Timestamp */}
+                            <p className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-200">
+                              <i className="fa-solid fa-clock mr-1"></i>
+                              {new Date(notif.createdAt).toLocaleString('es-ES', {
+                                dateStyle: 'full',
+                                timeStyle: 'short'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          {!notif.read && (
+                            <button
+                              onClick={() => handleMarkAsRead(notif.id)}
+                              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                              title="Marcar como leída"
+                            >
+                              <i className="fa-solid fa-check mr-2"></i>
+                              Leída
+                            </button>
+                          )}
+                          {notif.type === 'premium_granted' && (
+                            <button
+                              onClick={() => handleRemovePremium(notif.targetUserId, notif.id)}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                              title="Remover premium"
+                            >
+                              <i className="fa-solid fa-ban mr-2"></i>
+                              Remover
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteNotification(notif.id)}
+                            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                            title="Eliminar notificación"
+                          >
+                            <i className="fa-solid fa-trash mr-2"></i>
+                            Borrar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Modal para configurar días de premium */}
         {editingUser && (
@@ -538,6 +914,7 @@ export default function AdminDashboard({ onClose }) {
           <CreateUserModal
             onSave={handleCreateUser}
             onClose={() => setShowCreateUser(false)}
+            isSuperAdmin={isSuperAdmin()}
           />
         )}
 
@@ -556,6 +933,17 @@ export default function AdminDashboard({ onClose }) {
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmación */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        showCancel={true}
+      />
     </div>
   )
 }
@@ -569,7 +957,9 @@ function EditProfileModal({ user, onSave, onClose }) {
     phone: user.phone || '',
     country: user.country || '',
     state: user.state || '',
-    city: user.city || ''
+    city: user.city || '',
+    role: user.role || 'usuario', // Importante: mantener el role
+    accountType: user.accountType || 'free' // Mantener el accountType
   })
 
   const handleSubmit = (e) => {
@@ -676,7 +1066,7 @@ function EditProfileModal({ user, onSave, onClose }) {
 }
 
 // Modal para crear nuevo usuario
-function CreateUserModal({ onSave, onClose }) {
+function CreateUserModal({ onSave, onClose, isSuperAdmin }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -796,12 +1186,14 @@ function CreateUserModal({ onSave, onClose }) {
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                disabled={!isSuperAdmin}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 ${!isSuperAdmin ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
                 required
+                title={!isSuperAdmin ? 'Solo el Super Admin puede asignar roles Admin/Reina' : ''}
               >
                 <option value="user">👤 Usuario</option>
-                <option value="admin">🛡️ Admin</option>
-                <option value="reina">👑 Reina (Premium Auto)</option>
+                {isSuperAdmin && <option value="admin">🛡️ Admin</option>}
+                {isSuperAdmin && <option value="reina">👑 Reina (Premium Auto)</option>}
               </select>
             </div>
           </div>

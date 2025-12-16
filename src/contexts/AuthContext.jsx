@@ -7,8 +7,11 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth'
-import { doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, getDocs, query, where, deleteDoc, orderBy } from 'firebase/firestore'
+import { doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, getDocs, query, where, deleteDoc, orderBy, limit as firestoreLimit } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+
+const functions = getFunctions()
 
 const AuthContext = createContext({})
 
@@ -240,22 +243,65 @@ export const AuthProvider = ({ children }) => {
   }
 
   const updateUserRole = async (userId, role) => {
+    // Solo el super admin puede cambiar roles
+    if (!isSuperAdmin()) return { success: false, error: 'Solo el super administrador puede cambiar roles' }
+    
     try {
       const userRef = doc(db, 'users', userId)
+      const targetUserDoc = await getDoc(userRef)
+      const targetUserData = targetUserDoc.data()
+      const previousRole = targetUserData?.role
+      
       const updateData = {
         role: role,
         updatedAt: new Date().toISOString()
       }
       
-      // Si el rol es reina, automáticamente dar premium permanente
-      if (role === 'reina') {
+      // Si el rol es reina o admin, automáticamente dar premium permanente
+      if (role === 'reina' || role === 'admin') {
         updateData.accountType = 'premium'
         updateData.maxPdfLimit = -1
         updateData.premiumGrantedBy = 'admin'
+        updateData.subscriptionEndDate = null // Sin fecha de expiración = permanente
+      } else {
+        // Si se cambia a usuario normal (no admin/reina), quitar todos los privilegios
+        updateData.accountType = 'free'
+        updateData.maxPdfLimit = 5
+        updateData.premiumGrantedBy = null
+        updateData.subscriptionEndDate = null
+        updateData.subscriptionDate = null
       }
       
       await updateDoc(userRef, updateData)
-      return { success: true }
+      
+      // Crear notificación si el rol cambió (solo cuando es el super admin quien lo hace, como autolog)
+      if (previousRole !== role) {
+        const now = new Date()
+        const wasPrivileged = previousRole === 'admin' || previousRole === 'reina'
+        const isPrivileged = role === 'admin' || role === 'reina'
+        const notificationRef = collection(db, 'premiumNotifications')
+        
+        await addDoc(notificationRef, {
+          type: 'role_changed',
+          actionByUserId: user.uid,
+          actionByEmail: user.email,
+          actionByRole: 'super_admin',
+          actionByName: `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user.email,
+          targetUserId: userId,
+          targetUserEmail: targetUserData?.email || '',
+          targetUserName: `${targetUserData?.firstName || ''} ${targetUserData?.lastName || ''}`.trim() || targetUserData?.email,
+          previousRole: previousRole || 'user',
+          newRole: role,
+          privilegesRemoved: wasPrivileged && !isPrivileged,
+          privilegesGranted: !wasPrivileged && isPrivileged,
+          createdAt: now.toISOString(),
+          read: false,
+          active: true
+        })
+        console.log('📧 Notificación de cambio de rol enviada')
+      }
+      
+      return { success: true, role }
     } catch (error) {
       console.error('Error updating role:', error)
       return { success: false, error: error.message }
@@ -265,17 +311,45 @@ export const AuthProvider = ({ children }) => {
   const setPremiumDays = async (userId, days) => {
     try {
       const userRef = doc(db, 'users', userId)
+      const targetUserDoc = await getDoc(userRef)
+      const targetUserData = targetUserDoc.data()
+      
       const now = new Date()
       const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000)
       
       await updateDoc(userRef, {
         accountType: 'premium',
         maxPdfLimit: -1,
-        premiumGrantedBy: 'admin', // Marcar como regalo del admin
+        premiumGrantedBy: userData?.role || 'admin', // Guardar quien otorgó: admin o reina
+        premiumGrantedByUserId: user.uid,
+        premiumGrantedByEmail: user.email,
         subscriptionDate: now.toISOString(),
         subscriptionEndDate: endDate.toISOString(),
         updatedAt: now.toISOString()
       })
+      
+      // Si quien otorga NO es el super admin, crear notificación
+      if (!isSuperAdmin()) {
+        const notificationRef = collection(db, 'premiumNotifications')
+        await addDoc(notificationRef, {
+          type: 'premium_granted',
+          grantedByUserId: user.uid,
+          grantedByEmail: user.email,
+          grantedByRole: userData?.role || 'admin',
+          grantedByName: `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user.email,
+          targetUserId: userId,
+          targetUserEmail: targetUserData?.email || '',
+          targetUserName: `${targetUserData?.firstName || ''} ${targetUserData?.lastName || ''}`.trim() || targetUserData?.email,
+          days: days,
+          startDate: now.toISOString(),
+          endDate: endDate.toISOString(),
+          createdAt: now.toISOString(),
+          read: false,
+          active: true
+        })
+        console.log('📧 Notificación enviada al super admin')
+      }
+      
       return { success: true }
     } catch (error) {
       console.error('Error setting premium days:', error)
@@ -284,18 +358,56 @@ export const AuthProvider = ({ children }) => {
   }
 
   const cancelPremium = async (userId) => {
-    if (!isAdmin()) return { success: false, error: 'No autorizado' }
+    if (!isAdmin() && user?.uid !== userId) return { success: false, error: 'No autorizado' }
     
     try {
       const userRef = doc(db, 'users', userId)
+      const userDoc = await getDoc(userRef)
+      const targetUserData = userDoc.data()
+
       await updateDoc(userRef, {
         accountType: 'free',
         maxPdfLimit: 5,
         premiumGrantedBy: null,
         subscriptionDate: null,
         subscriptionEndDate: null,
+        cancelledAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       })
+
+      // Notificar al super admin si no es él quien lo hace
+      if (!isSuperAdmin()) {
+        const now = new Date()
+        const notificationRef = collection(db, 'premiumNotifications')
+        await addDoc(notificationRef, {
+          type: 'premium_cancelled',
+          actionByUserId: user.uid,
+          actionByEmail: user.email,
+          actionByRole: userData?.role || 'admin',
+          actionByName: `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user.email,
+          targetUserId: userId,
+          targetUserEmail: targetUserData?.email || '',
+          targetUserName: `${targetUserData?.firstName || ''} ${targetUserData?.lastName || ''}`.trim() || targetUserData?.email,
+          createdAt: now.toISOString(),
+          read: false,
+          active: true
+        })
+        console.log('📧 Notificación de cancelación enviada al super admin')
+      }
+
+      // Enviar email de cancelación
+      try {
+        const sendEmail = httpsCallable(functions, 'sendCancellationEmail')
+        await sendEmail({
+          userEmail: userData?.email || user?.email,
+          userName: `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || 'Usuario'
+        })
+        console.log('✅ Email de cancelación enviado')
+      } catch (emailError) {
+        console.warn('⚠️ No se pudo enviar el email de cancelación:', emailError)
+        // No falla la cancelación si el email falla
+      }
+
       return { success: true }
     } catch (error) {
       console.error('Error cancelando premium:', error)
@@ -315,14 +427,105 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const deleteAccount = async () => {
+    if (!user) return { success: false, error: 'No autenticado' }
+    
+    try {
+      // 1. Eliminar datos de Firestore
+      await deleteDoc(doc(db, 'users', user.uid))
+      
+      // 2. Eliminar cuenta de autenticación
+      await user.delete()
+      
+      // 3. Cerrar sesión
+      await signOut(auth)
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Error eliminando cuenta:', error)
+      
+      // Si el error es de reautenticación requerida
+      if (error.code === 'auth/requires-recent-login') {
+        return { success: false, error: 'Por seguridad, debes iniciar sesión nuevamente antes de eliminar tu cuenta.' }
+      }
+      
+      return { success: false, error: error.message }
+    }
+  }
+
   const updateUserProfileByAdmin = async (userId, profileData) => {
     if (!isAdmin()) return { success: false, error: 'No autorizado' }
     
+    // Proteger al super admin de modificaciones por otros admins
+    const targetUserRef = doc(db, 'users', userId)
+    const targetUserDoc = await getDoc(targetUserRef)
+    const targetUserData = targetUserDoc.data()
+    
+    if (targetUserData?.email === 'franco_burgoa1@hotmail.com' && !isSuperAdmin()) {
+      return { success: false, error: '🚫 No puedes modificar al super administrador' }
+    }
+    
     try {
+      // Si el rol es admin o reina, forzar premium permanente
+      if (profileData.role === 'admin' || profileData.role === 'reina') {
+        profileData.accountType = 'premium'
+        profileData.maxPdfLimit = -1
+        profileData.premiumGrantedBy = 'admin'
+        profileData.subscriptionEndDate = null // Permanente
+        profileData.subscriptionDate = null
+      } else if (profileData.role === 'usuario' || profileData.role === 'user') {
+        // Si se cambia a usuario normal, quitar privilegios si tenía admin/reina
+        // Solo si NO especifica explícitamente mantener premium
+        if (!profileData.accountType || profileData.accountType === 'premium') {
+          profileData.accountType = 'free'
+          profileData.maxPdfLimit = 5
+          profileData.premiumGrantedBy = null
+          profileData.subscriptionEndDate = null
+          profileData.subscriptionDate = null
+        }
+      }
+      
       await setDoc(doc(db, 'users', userId), {
         ...profileData,
         updatedAt: new Date().toISOString()
       }, { merge: true })
+      
+      // Notificar al super admin si no es él quien modifica
+      if (!isSuperAdmin()) {
+        const now = new Date()
+        const notificationRef = collection(db, 'premiumNotifications')
+        
+        // Determinar qué cambió
+        const changes = []
+        if (profileData.role && profileData.role !== targetUserData?.role) {
+          changes.push(`Rol: ${targetUserData?.role || 'user'} → ${profileData.role}`)
+        }
+        if (profileData.accountType && profileData.accountType !== targetUserData?.accountType) {
+          changes.push(`Cuenta: ${targetUserData?.accountType || 'free'} → ${profileData.accountType}`)
+        }
+        if (profileData.firstName !== undefined || profileData.lastName !== undefined) {
+          changes.push('Información personal')
+        }
+        
+        if (changes.length > 0) {
+          await addDoc(notificationRef, {
+            type: 'profile_modified',
+            actionByUserId: user.uid,
+            actionByEmail: user.email,
+            actionByRole: userData?.role || 'admin',
+            actionByName: `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user.email,
+            targetUserId: userId,
+            targetUserEmail: targetUserData?.email || '',
+            targetUserName: `${targetUserData?.firstName || ''} ${targetUserData?.lastName || ''}`.trim() || targetUserData?.email,
+            changes: changes,
+            createdAt: now.toISOString(),
+            read: false,
+            active: true
+          })
+          console.log('📧 Notificación de modificación de perfil enviada al super admin')
+        }
+      }
+      
       return { success: true }
     } catch (error) {
       console.error('Error actualizando perfil:', error)
@@ -336,6 +539,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const now = new Date()
       const userRef = doc(collection(db, 'users'))
+      const isPrivilegedRole = userData.role === 'reina' || userData.role === 'admin'
+      
       await setDoc(userRef, {
         email: userData.email,
         firstName: userData.firstName,
@@ -344,10 +549,12 @@ export const AuthProvider = ({ children }) => {
         state: userData.state || '',
         city: userData.city || '',
         phone: userData.phone || '',
-        accountType: userData.role === 'reina' ? 'premium' : (userData.accountType || 'free'),
+        accountType: isPrivilegedRole ? 'premium' : (userData.accountType || 'free'),
         role: userData.role || 'user',
         pdfUploaded: 0,
-        maxPdfLimit: userData.role === 'reina' ? -1 : (userData.accountType === 'premium' ? -1 : 5),
+        maxPdfLimit: isPrivilegedRole ? -1 : (userData.accountType === 'premium' ? -1 : 5),
+        premiumGrantedBy: isPrivilegedRole ? 'admin' : (userData.accountType === 'premium' ? 'admin' : null),
+        subscriptionEndDate: isPrivilegedRole ? null : (userData.subscriptionEndDate || null),
         weekStartDate: now.toISOString(),
         createdAt: now.toISOString(),
         updatedAt: now.toISOString()
@@ -366,6 +573,9 @@ export const AuthProvider = ({ children }) => {
     // Super admin (franco_burgoa1@hotmail.com): SIEMPRE premium ilimitado
     if (user?.email === 'franco_burgoa1@hotmail.com') return true
     
+    // Rol "admin": SIEMPRE tiene premium ilimitado
+    if (userData?.role === 'admin') return true
+    
     // Rol "reina": SIEMPRE tiene premium ilimitado
     if (userData?.role === 'reina') return true
     
@@ -381,6 +591,7 @@ export const AuthProvider = ({ children }) => {
   const getRemainingUploads = () => {
     if (!user) return null // Se maneja en App.jsx
     if (user?.email === 'franco_burgoa1@hotmail.com') return -1 // Super admin: ilimitado siempre
+    if (userData?.role === 'admin') return -1 // Rol admin: ilimitado siempre
     if (userData?.role === 'reina') return -1 // Rol reina: ilimitado siempre
     if (userData?.accountType === 'premium') return -1 // Ilimitado
     
@@ -519,9 +730,17 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const isAdmin = () => {
+  const isSuperAdmin = () => {
     const adminEmail = import.meta.env.VITE_ADMIN_EMAIL
     return user?.email === adminEmail
+  }
+
+  const isAdmin = () => {
+    // Super admin siempre tiene acceso
+    if (isSuperAdmin()) return true
+    
+    // Usuarios con rol admin o reina también tienen acceso al dashboard
+    return userData?.role === 'admin' || userData?.role === 'reina'
   }
 
   const getAllUsers = async () => {
@@ -534,10 +753,7 @@ export const AuthProvider = ({ children }) => {
       querySnapshot.forEach((doc) => {
         users.push({ id: doc.id, ...doc.data() })
       })
-      return { su,
-    deleteUser,
-    updateUserProfileByAdmin,
-    createUserByAdminccess: true, users }
+      return { success: true, users }
     } catch (error) {
       console.error('Error obteniendo usuarios:', error)
       return { success: false, error: error.message }
@@ -569,6 +785,81 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Obtener notificaciones de premium otorgado
+  const getPremiumNotifications = async () => {
+    if (!isSuperAdmin()) return { success: false, error: 'No autorizado' }
+    
+    try {
+      const q = query(
+        collection(db, 'premiumNotifications'),
+        orderBy('createdAt', 'desc'),
+        firestoreLimit(100)
+      )
+      const querySnapshot = await getDocs(q)
+      const notifications = []
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        // Filtrar activos en el cliente para evitar índice compuesto
+        if (data.active !== false) {
+          notifications.push({ id: doc.id, ...data })
+        }
+      })
+      return { success: true, notifications }
+    } catch (error) {
+      console.error('Error obteniendo notificaciones:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Marcar notificación como leída
+  const markNotificationAsRead = async (notificationId) => {
+    if (!isSuperAdmin()) return { success: false, error: 'No autorizado' }
+    
+    try {
+      await updateDoc(doc(db, 'premiumNotifications', notificationId), {
+        read: true,
+        readAt: new Date().toISOString()
+      })
+      return { success: true }
+    } catch (error) {
+      console.error('Error marcando notificación:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Remover premium otorgado por admin/reina (solo super admin)
+  const removePremiumGrantedByAdmin = async (userId, notificationId) => {
+    if (!isSuperAdmin()) return { success: false, error: 'Solo el super admin puede remover premium' }
+    
+    try {
+      // Remover premium del usuario
+      await updateDoc(doc(db, 'users', userId), {
+        accountType: 'free',
+        maxPdfLimit: 5,
+        premiumGrantedBy: null,
+        premiumGrantedByUserId: null,
+        premiumGrantedByEmail: null,
+        subscriptionDate: null,
+        subscriptionEndDate: null,
+        updatedAt: new Date().toISOString()
+      })
+      
+      // Marcar la notificación como inactiva
+      if (notificationId) {
+        await updateDoc(doc(db, 'premiumNotifications', notificationId), {
+          active: false,
+          revokedAt: new Date().toISOString(),
+          revokedBy: user.email
+        })
+      }
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Error removiendo premium:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
   const value = {
     user,
     userData,
@@ -589,11 +880,19 @@ export const AuthProvider = ({ children }) => {
     loadUserInvoices,
     updateUserProfile,
     isAdmin,
+    isSuperAdmin,
     getAllUsers,
     updateUserSubscription,
     updateUserRole,
     setPremiumDays,
-    cancelPremium
+    cancelPremium,
+    deleteUser,
+    deleteAccount,
+    updateUserProfileByAdmin,
+    createUserByAdmin,
+    getPremiumNotifications,
+    markNotificationAsRead,
+    removePremiumGrantedByAdmin
   }
 
   return (

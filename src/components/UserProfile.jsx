@@ -12,7 +12,8 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
 
   const remaining = getRemainingUploads()
   const isSuperAdmin = user?.email === 'franco_burgoa1@hotmail.com'
-  const isPremium = isSuperAdmin || userData?.accountType === 'premium'
+  const isAdmin = userData?.role === 'admin'
+  const isPremium = isSuperAdmin || isAdmin || userData?.role === 'reina' || userData?.accountType === 'premium'
   const isReina = userData?.role === 'reina'
   const isPremiumGift = userData?.premiumGrantedBy === 'admin'
 
@@ -34,6 +35,11 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
               <span className="flex items-center gap-1 text-purple-600 font-semibold">
                 <i className="fa-solid fa-shield-halved"></i>
                 <span>Super Admin</span>
+              </span>
+            ) : isAdmin ? (
+              <span className="flex items-center gap-1 text-blue-600 font-semibold">
+                <i className="fa-solid fa-user-shield"></i>
+                <span>Admin</span>
               </span>
             ) : isReina ? (
               <span className="flex items-center gap-1 text-pink-600 font-semibold">
@@ -72,7 +78,7 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
               <p className="text-sm font-medium text-gray-900">
                 {userData?.email}
               </p>
-              {!isSuperAdmin && !isPremium && !isReina && (
+              {!isSuperAdmin && !isAdmin && !isPremium && !isReina && (
                 <div className="mt-2 text-xs text-gray-600">
                   <i className="fa-solid fa-file-pdf mr-1"></i>
                   {remaining !== null && remaining >= 0 ? (
@@ -84,7 +90,7 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
               )}
             </div>
 
-            {!isSuperAdmin && !isPremium && !isReina && (
+            {!isSuperAdmin && !isAdmin && !isPremium && !isReina && (
               <button
                 onClick={() => {
                   setShowMenu(false)

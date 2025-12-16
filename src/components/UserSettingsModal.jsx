@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function UserSettingsModal({ onClose }) {
-  const { user, userData, logout, updateUserProfile, getRemainingUploads } = useAuth()
+  const { user, userData, logout, updateUserProfile, getRemainingUploads, cancelPremium, deleteAccount } = useAuth()
   const [activeTab, setActiveTab] = useState('profile') // profile, billing, preferences
   const [formData, setFormData] = useState({
     firstName: userData?.firstName || '',
@@ -14,6 +14,8 @@ export default function UserSettingsModal({ onClose }) {
   })
   const [message, setMessage] = useState({ type: '', text: '' })
   const [saving, setSaving] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const handleUpdate = async (e) => {
     e.preventDefault()
@@ -35,6 +37,36 @@ export default function UserSettingsModal({ onClose }) {
   const handleLogout = async () => {
     await logout()
     onClose()
+  }
+
+  const handleCancelSubscription = async () => {
+    setSaving(true)
+    const result = await cancelPremium(user.uid)
+    
+    if (result.success) {
+      setMessage({ type: 'success', text: '✅ Suscripción cancelada. Se ha enviado un email de confirmación.' })
+      setShowCancelModal(false)
+      setTimeout(() => {
+        window.location.reload() // Recargar para actualizar el estado
+      }, 2000)
+    } else {
+      setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
+    }
+    setSaving(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    setSaving(true)
+    const result = await deleteAccount()
+    
+    if (result.success) {
+      // La cuenta fue eliminada, no necesitamos hacer nada más
+      // El usuario ya fue deslogueado automáticamente
+    } else {
+      setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
+      setShowDeleteModal(false)
+    }
+    setSaving(false)
   }
 
   return (
@@ -223,6 +255,18 @@ export default function UserSettingsModal({ onClose }) {
                         <span className="text-gray-700">Free</span>
                       )}
                     </p>
+                    {userData?.accountType === 'premium' && userData?.subscriptionEndDate && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        <i className="fa-solid fa-calendar-days mr-1"></i>
+                        {(() => {
+                          const end = new Date(userData.subscriptionEndDate)
+                          const now = new Date()
+                          const diff = end - now
+                          const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24))
+                          return daysLeft > 0 ? `${daysLeft} días restantes` : 'Expirado'
+                        })()}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-gray-600 text-sm">Límite mensual</p>
@@ -276,6 +320,9 @@ export default function UserSettingsModal({ onClose }) {
                     </p>
                   </div>
 
+                    onClick={() => setShowCancelModal(true)}
+                    className="mt-4 w-full text-red-600 hover:text-red-700 font-medium py-2"
+                  
                   <div className="text-center mb-6">
                     <p className="text-4xl font-bold text-gray-900">$8.99<span className="text-lg text-gray-600">/mes</span></p>
                   </div>
@@ -325,6 +372,7 @@ export default function UserSettingsModal({ onClose }) {
                     <span className="text-gray-700">Notificaciones por email</span>
                     <input type="checkbox" className="w-5 h-5 text-blue-600" defaultChecked />
                   </label>
+
                   <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
                     <span className="text-gray-700">Actualizaciones de producto</span>
                     <input type="checkbox" className="w-5 h-5 text-blue-600" defaultChecked />
@@ -352,7 +400,10 @@ export default function UserSettingsModal({ onClose }) {
 
               <div className="border-t pt-6">
                 <h4 className="font-semibold text-red-600 mb-3">Zona de Peligro</h4>
-                <button className="w-full bg-red-50 hover:bg-red-100 text-red-700 font-medium py-3 px-4 rounded-lg border border-red-200 transition-colors">
+                <button 
+                  onClick={() => setShowDeleteModal(true)}
+                  className="w-full bg-red-50 hover:bg-red-100 text-red-700 font-medium py-3 px-4 rounded-lg border border-red-200 transition-colors"
+                >
                   Eliminar Cuenta Permanentemente
                 </button>
               </div>
@@ -370,11 +421,142 @@ export default function UserSettingsModal({ onClose }) {
           </button>
           <button
             onClick={onClose}
-            className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg border border-gray-300 transition-colors"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
           >
             Cerrar
           </button>
         </div>
+
+        {/* Modal de Confirmación de Cancelación */}
+        {showCancelModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                <i className="fa-solid fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                ¿Cancelar Suscripción Premium?
+              </h3>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4">Si cancelas tu suscripción, perderás acceso a:</p>
+                <div className="space-y-2 bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    <strong>PDFs ilimitados</strong> (vuelves a 5 PDFs/semana)
+                  </p>
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    <strong>Almacenamiento en la nube permanente</strong>
+                  </p>
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    <strong>Soporte prioritario</strong>
+                  </p>
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    <strong>Exportación avanzada</strong>
+                  </p>
+                </div>
+                
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <i className="fa-solid fa-info-circle mr-2"></i>
+                    Se enviará un email de confirmación con todos los detalles. 
+                    <strong> No se realizarán más cobros automáticos.</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+                >
+                  Mantener Premium
+                </button>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  {saving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      Cancelando...
+                    </span>
+                  ) : (
+                    'Sí, Cancelar'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Confirmación de Eliminación de Cuenta */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-red-600 mb-4">
+                <i className="fa-solid fa-exclamation-triangle mr-2"></i>
+                ¡ADVERTENCIA! Eliminar Cuenta
+              </h3>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4 font-semibold">Esta acción es PERMANENTE e IRREVERSIBLE.</p>
+                <div className="space-y-2 bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    Todos tus datos serán eliminados
+                  </p>
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    Todos tus PDFs se perderán
+                  </p>
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    No podrás recuperar tu cuenta
+                  </p>
+                  <p className="flex items-center text-red-700">
+                    <i className="fa-solid fa-times-circle mr-2"></i>
+                    Se cancelará tu suscripción inmediatamente
+                  </p>
+                </div>
+                
+                <div className="mt-4 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800 font-medium">
+                    <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+                    ¿Estás completamente seguro de que deseas continuar?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+                >
+                  No, Volver
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-bold"
+                >
+                  {saving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      Eliminando...
+                    </span>
+                  ) : (
+                    'Sí, Eliminar Todo'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
