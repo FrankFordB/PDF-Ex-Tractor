@@ -14,7 +14,8 @@ export default function AdminDashboard({ onClose }) {
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [editingProfile, setEditingProfile] = useState(null)
   const [notifications, setNotifications] = useState([])
-  const [activeTab, setActiveTab] = useState('users') // users o notifications
+  const [activeTab, setActiveTab] = useState('users') // users, notifications
+  const [notificationTab, setNotificationTab] = useState('unread') // unread, read
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })
 
   useEffect(() => {
@@ -403,7 +404,7 @@ export default function AdminDashboard({ onClose }) {
                       <i className="fa-solid fa-bell mr-2"></i>
                       Notificaciones
                       {notifications.filter(n => !n.read).length > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
                           {notifications.filter(n => !n.read).length}
                         </span>
                       )}
@@ -611,17 +612,59 @@ export default function AdminDashboard({ onClose }) {
             </div>
           )}
         </div>
-        ) : (
-          <div className="p-6 max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <i className="fa-solid fa-inbox text-6xl text-gray-300 mb-4"></i>
-                <p className="text-xl text-gray-500 font-medium">No hay notificaciones</p>
-                <p className="text-gray-400 mt-2">Aquí aparecerán cuando Admin o Reina otorguen premium</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {notifications.map((notif) => {
+        ) : activeTab === 'notifications' ? (
+          <div>
+            {/* Sub-pestañas de notificaciones */}
+            <div className="flex gap-3 p-4 bg-gray-50 border-b border-gray-200">
+              <button
+                onClick={() => setNotificationTab('unread')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  notificationTab === 'unread'
+                    ? 'bg-red-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
+              >
+                <i className="fa-solid fa-bell mr-2"></i>
+                Nuevas
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-bold animate-pulse">
+                    {notifications.filter(n => !n.read).length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setNotificationTab('read')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  notificationTab === 'read'
+                    ? 'bg-gray-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
+              >
+                <i className="fa-solid fa-check-double mr-2"></i>
+                Leídas
+                {notifications.filter(n => n.read).length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-gray-500 text-white text-xs rounded-full font-bold">
+                    {notifications.filter(n => n.read).length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Contenido de notificaciones */}
+            <div className="p-6 max-h-96 overflow-y-auto">
+              {notificationTab === 'unread' && (
+                notifications.filter(n => !n.read).length === 0 ? (
+                  <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                    <i className="fa-solid fa-inbox text-6xl text-gray-300 mb-4"></i>
+                    <p className="text-xl text-gray-500 font-medium">No hay notificaciones nuevas</p>
+                    <p className="text-gray-400 mt-2">Las notificaciones no leídas aparecerán aquí</p>
+                  </div>
+                ) : (
+                  <div>
+                    {notifications.filter(n => !n.read).length > 0 && (
+                  <div>
+                    <div className="space-y-4">
+                      {notifications.filter(n => !n.read).map((notif) => {
                   // Función helper para obtener el icono y color según el tipo
                   const getNotificationStyle = () => {
                     switch(notif.type) {
@@ -823,10 +866,217 @@ export default function AdminDashboard({ onClose }) {
                     </div>
                   )
                 })}
-              </div>
-            )}
+                    </div>
+                  </div>
+                )}
+                  </div>
+                )
+              )}
+
+              {notificationTab === 'read' && (
+                notifications.filter(n => n.read).length === 0 ? (
+                  <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                    <i className="fa-solid fa-inbox text-6xl text-gray-300 mb-4"></i>
+                    <p className="text-xl text-gray-500 font-medium">No hay notificaciones leídas</p>
+                    <p className="text-gray-400 mt-2">Las notificaciones leídas aparecerán aquí</p>
+                  </div>
+                ) : (
+                  <div>
+                    {notifications.filter(n => n.read).length > 0 && (
+                  <div>
+                    <div className="space-y-4">
+                      {notifications.filter(n => n.read).map((notif) => {
+                        // Función helper para obtener el icono y color según el tipo
+                        const getNotificationStyle = () => {
+                          switch(notif.type) {
+                            case 'premium_granted':
+                              return {
+                                icon: '✨',
+                                borderColor: 'border-green-500',
+                                bgColor: 'bg-green-50',
+                                title: 'Premium Otorgado'
+                              }
+                            case 'premium_cancelled':
+                              return {
+                                icon: '❌',
+                                borderColor: 'border-red-500',
+                                bgColor: 'bg-red-50',
+                                title: 'Premium Cancelado'
+                              }
+                            case 'role_changed':
+                              return {
+                                icon: '🔄',
+                                borderColor: 'border-blue-500',
+                                bgColor: 'bg-blue-50',
+                                title: 'Rol Modificado'
+                              }
+                            case 'profile_modified':
+                              return {
+                                icon: '✏️',
+                                borderColor: 'border-yellow-500',
+                                bgColor: 'bg-yellow-50',
+                                title: 'Perfil Modificado'
+                              }
+                            default:
+                              return {
+                                icon: '📋',
+                                borderColor: 'border-gray-500',
+                                bgColor: 'bg-gray-50',
+                                title: 'Notificación'
+                              }
+                          }
+                        }
+
+                        const style = getNotificationStyle()
+                        const actionBy = notif.actionByRole || notif.grantedByRole
+
+                        return (
+                          <div
+                            key={notif.id}
+                            className={`bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-300 opacity-75`}
+                          >
+                            <div className="flex justify-between items-start gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <span className="text-3xl opacity-60">{style.icon}</span>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-lg text-gray-700">
+                                        {style.title}
+                                      </span>
+                                    </div>
+                                    <span className="text-sm text-gray-500">
+                                      {actionBy === 'reina' ? '👑' : actionBy === 'super_admin' ? '⭐' : '🛡️'} 
+                                      {' '}{notif.actionByName || notif.grantedByName} - {notif.actionByEmail || notif.grantedByEmail}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                <div className={`${style.bgColor} rounded-lg p-4 space-y-2 opacity-80`}>
+                                  {/* Información del usuario afectado */}
+                                  <p className="flex items-center gap-2">
+                                    <i className="fa-solid fa-user text-purple-500"></i>
+                                    <span className="text-gray-600">Usuario afectado:</span>
+                                    <strong className="text-gray-900">{notif.targetUserName}</strong>
+                                  </p>
+                                  <p className="flex items-center gap-2 ml-6">
+                                    <i className="fa-solid fa-envelope text-blue-500"></i>
+                                    <span className="text-sm text-gray-600">{notif.targetUserEmail}</span>
+                                  </p>
+
+                                  {/* Contenido específico según el tipo */}
+                                  {notif.type === 'premium_granted' && (
+                                    <>
+                                      <p className="flex items-center gap-2">
+                                        <i className="fa-solid fa-calendar text-green-500"></i>
+                                        <span className="text-gray-600">Duración:</span>
+                                        <strong className="text-green-700">{notif.days} días</strong>
+                                      </p>
+                                      <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-gray-200">
+                                        <p className="text-sm text-gray-500">
+                                          <i className="fa-solid fa-clock mr-1"></i>
+                                          Inicio: {new Date(notif.startDate).toLocaleString('es-ES')}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                          <i className="fa-solid fa-hourglass-end mr-1"></i>
+                                          Vence: {new Date(notif.endDate).toLocaleDateString('es-ES')}
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {notif.type === 'premium_cancelled' && (
+                                    <p className="flex items-center gap-2">
+                                      <i className="fa-solid fa-ban text-red-500"></i>
+                                      <span className="text-gray-600">Premium cancelado</span>
+                                      <span className="text-sm text-gray-500 ml-auto">
+                                        {new Date(notif.createdAt).toLocaleString('es-ES')}
+                                      </span>
+                                    </p>
+                                  )}
+
+                                  {notif.type === 'role_changed' && (
+                                    <>
+                                      <p className="flex items-center gap-2">
+                                        <i className="fa-solid fa-exchange-alt text-blue-500"></i>
+                                        <span className="text-gray-600">Rol:</span>
+                                        <span className="font-medium text-gray-700">{notif.previousRole}</span>
+                                        <span className="text-gray-400">→</span>
+                                        <strong className="text-blue-700">{notif.newRole}</strong>
+                                      </p>
+                                      {notif.privilegesRemoved && (
+                                        <p className="flex items-center gap-2 text-red-600 font-medium">
+                                          <i className="fa-solid fa-arrow-down"></i>
+                                          Se removieron privilegios de administrador
+                                        </p>
+                                      )}
+                                      {notif.privilegesGranted && (
+                                        <p className="flex items-center gap-2 text-green-600 font-medium">
+                                          <i className="fa-solid fa-arrow-up"></i>
+                                          Se otorgaron privilegios de administrador
+                                        </p>
+                                      )}
+                                    </>
+                                  )}
+
+                                  {notif.type === 'profile_modified' && notif.changes && (
+                                    <div className="space-y-1">
+                                      <p className="text-sm font-medium text-gray-700">
+                                        <i className="fa-solid fa-list text-yellow-500 mr-2"></i>
+                                        Cambios realizados:
+                                      </p>
+                                      {notif.changes.map((change, idx) => (
+                                        <p key={idx} className="text-sm text-gray-600 ml-6">
+                                          • {change}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Timestamp */}
+                                  <p className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-200">
+                                    <i className="fa-solid fa-clock mr-1"></i>
+                                    {new Date(notif.createdAt).toLocaleString('es-ES', {
+                                      dateStyle: 'full',
+                                      timeStyle: 'short'
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-2">
+                                {notif.type === 'premium_granted' && (
+                                  <button
+                                    onClick={() => handleRemovePremium(notif.targetUserId, notif.id)}
+                                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                    title="Remover premium"
+                                  >
+                                    <i className="fa-solid fa-ban mr-2"></i>
+                                    Remover
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteNotification(notif.id)}
+                                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                  title="Eliminar notificación"
+                                >
+                                  <i className="fa-solid fa-trash mr-2"></i>
+                                  Borrar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                  </div>
+                )
+              )}
+            </div>
           </div>
-        )}
+        ) : null}
 
         {/* Modal para configurar días de premium */}
         {editingUser && (
