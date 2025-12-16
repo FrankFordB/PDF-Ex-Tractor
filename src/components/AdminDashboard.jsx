@@ -128,8 +128,8 @@ export default function AdminDashboard({ onClose }) {
   const handleDeleteUser = async (userId) => {
     setConfirmModal({
       isOpen: true,
-      title: '⚠️ Eliminar Usuario',
-      message: '¿Estás SEGURO de eliminar este usuario?\n\n⚠️ ADVERTENCIA: Esta acción NO se puede deshacer.\n\nSe eliminarán todos sus datos permanentemente.',
+      title: '⚠️ Eliminar Usuario Completamente',
+      message: '¿Estás SEGURO de eliminar este usuario?\n\n⚠️ Esta acción borrará:\n• Cuenta de autenticación\n• Todos los datos de Firestore\n• Todas las facturas/PDFs cargados\n• No podrá volver a iniciar sesión\n\n❌ ESTA ACCIÓN ES IRREVERSIBLE',
       type: 'error',
       onConfirm: () => {
         setConfirmModal({ ...confirmModal, isOpen: false })
@@ -139,11 +139,13 @@ export default function AdminDashboard({ onClose }) {
   }
 
   const executeDeleteUser = async (userId) => {
-    
     const result = await deleteUser(userId)
     if (result.success) {
-      setMessage({ type: 'success', text: '✅ Usuario eliminado' })
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      setMessage({ 
+        type: 'success', 
+        text: `✅ Usuario eliminado completamente. ${result.deletedInvoices || 0} facturas borradas.` 
+      })
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000)
       loadUsers()
     } else {
       setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
@@ -165,10 +167,23 @@ export default function AdminDashboard({ onClose }) {
   const handleCreateUser = async (userData) => {
     const result = await createUserByAdmin(userData)
     if (result.success) {
-      setMessage({ type: 'success', text: '✅ Usuario creado exitosamente' })
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
-      setShowCreateUser(false)
-      loadUsers()
+      if (result.requiresRelogin) {
+        // Mostrar mensaje especial para re-login
+        setMessage({ 
+          type: 'success', 
+          text: '✅ Usuario creado exitosamente. Debes volver a iniciar sesión ahora.' 
+        })
+        // Cerrar modal después de 2 segundos y cerrar el panel
+        setTimeout(() => {
+          setShowCreateUser(false)
+          onClose() // Cerrar el panel de admin para forzar re-login
+        }, 2000)
+      } else {
+        setMessage({ type: 'success', text: '✅ Usuario creado exitosamente' })
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+        setShowCreateUser(false)
+        loadUsers()
+      }
     } else {
       setMessage({ type: 'error', text: `❌ Error: ${result.error}` })
     }
@@ -660,11 +675,8 @@ export default function AdminDashboard({ onClose }) {
                     <p className="text-gray-400 mt-2">Las notificaciones no leídas aparecerán aquí</p>
                   </div>
                 ) : (
-                  <div>
-                    {notifications.filter(n => !n.read).length > 0 && (
-                  <div>
-                    <div className="space-y-4">
-                      {notifications.filter(n => !n.read).map((notif) => {
+                  <div className="space-y-4">
+                    {notifications.filter(n => !n.read).map((notif) => {
                   // Función helper para obtener el icono y color según el tipo
                   const getNotificationStyle = () => {
                     switch(notif.type) {
@@ -866,9 +878,6 @@ export default function AdminDashboard({ onClose }) {
                     </div>
                   )
                 })}
-                    </div>
-                  </div>
-                )}
                   </div>
                 )
               )}
@@ -881,11 +890,8 @@ export default function AdminDashboard({ onClose }) {
                     <p className="text-gray-400 mt-2">Las notificaciones leídas aparecerán aquí</p>
                   </div>
                 ) : (
-                  <div>
-                    {notifications.filter(n => n.read).length > 0 && (
-                  <div>
-                    <div className="space-y-4">
-                      {notifications.filter(n => n.read).map((notif) => {
+                  <div className="space-y-4">
+                    {notifications.filter(n => n.read).map((notif) => {
                         // Función helper para obtener el icono y color según el tipo
                         const getNotificationStyle = () => {
                           switch(notif.type) {
@@ -1069,10 +1075,7 @@ export default function AdminDashboard({ onClose }) {
                         )
                       })}
                     </div>
-                  </div>
-                )}
-                  </div>
-                )
+                  )
               )}
             </div>
           </div>
@@ -1321,6 +1324,7 @@ function CreateUserModal({ onSave, onClose, isSuperAdmin }) {
     firstName: '',
     lastName: '',
     email: '',
+    password: '',
     phone: '',
     country: '',
     state: '',
@@ -1377,6 +1381,20 @@ function CreateUserModal({ onSave, onClose, isSuperAdmin }) {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                 required
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Contraseña <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                required
+                minLength="6"
+                placeholder="Mínimo 6 caracteres"
               />
             </div>
             <div>

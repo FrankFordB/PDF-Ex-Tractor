@@ -55,9 +55,9 @@ service cloud.firestore {
     
     // Reglas para la colección de facturas/invoices
     match /invoices/{invoiceId} {
-      // Solo el dueño puede leer sus facturas
+      // El dueño o admins pueden leer facturas
       allow read: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
+        && (request.auth.uid == resource.data.userId || isAdmin());
       
       // Solo el dueño puede crear facturas para sí mismo
       allow create: if request.auth != null 
@@ -67,9 +67,9 @@ service cloud.firestore {
       allow update: if request.auth != null 
         && request.auth.uid == resource.data.userId;
       
-      // Solo el dueño puede eliminar sus facturas
+      // El dueño o admins pueden eliminar facturas
       allow delete: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
+        && (request.auth.uid == resource.data.userId || isAdmin());
     }
     
     // Denegar todo lo demás por defecto

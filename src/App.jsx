@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar'
 import DropzoneArea from './components/DropzoneArea'
 import ResultCard from './components/ResultCard'
@@ -11,6 +11,8 @@ import GuestLimitModal from './components/GuestLimitModal'
 import UserSettingsModal from './components/UserSettingsModal'
 import AdminDashboard from './components/AdminDashboard'
 import ConfirmModal from './components/ConfirmModal'
+import UsagePanel from './components/UsagePanel'
+import AdBanner from './components/AdBanner'
 import { useAuth } from './contexts/AuthContext'
 import useLocalStorage from './hooks/useLocalStorage'
 import { extractTextFromFile } from './utils/pdfReader'
@@ -79,7 +81,6 @@ export default function App() {
   const [viewMode, setViewMode] = useState('enProceso')
   const [showResetModal, setShowResetModal] = useState(false)
   const [showWelcome, setShowWelcome] = useLocalStorage('welcomeShown', false)
-  const [localPdfCount, setLocalPdfCount] = useState(0) // Contador local para forzar re-render
   const [showLogin, setShowLogin] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
@@ -88,6 +89,17 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false)
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'error' })
   const [guestUploadCount, setGuestUploadCount] = useLocalStorage('guestUploads', 0)
+
+  // Referencia para contador de PDFs que se actualiza inmediatamente
+  const pdfCountRef = useRef(userData?.pdfUploaded || 0)
+  
+  // Sincronizar la referencia cuando userData cambie (al cargar desde Firestore)
+  useEffect(() => {
+    if (userData?.pdfUploaded !== undefined) {
+      pdfCountRef.current = userData.pdfUploaded
+      console.log(`🔄 Contador sincronizado desde Firestore: ${userData.pdfUploaded}`)
+    }
+  }, [userData?.pdfUploaded])
 
   // Usar resultados según si hay usuario o no
   // Si hay usuario: combinar resultados locales (recién subidos) con los de Firestore
@@ -524,31 +536,35 @@ export default function App() {
       }
     }
     
-    // Usuario free: verificar límite antes de empezar
-    if (user && userData?.accountType === 'free') {
-      const currentCount = localPdfCount || userData?.pdfUploaded || 0
-      console.log(`🔍 Verificando límite: ${currentCount}/5`)
-      if (currentCount >= 5) {
-        console.log('⛔ LÍMITE ALCANZADO - Mostrando modal')
-        setShowUpgrade(true)
-        return
+    // Usuario autenticado: verificar si puede subir (si es free y superó el límite)
+    if (user) {
+      const isSuperAdmin = user?.email === 'franco_burgoa1@hotmail.com'
+      const isAdmin = userData?.role === 'admin'
+      const isReina = userData?.role === 'reina'
+      const isPremium = userData?.accountType === 'premium'
+      
+      // Solo verificar límite si es usuario free
+      if (!isSuperAdmin && !isAdmin && !isReina && !isPremium) {
+        const limit = userData?.maxPdfLimit || 5
+        const currentCount = pdfCountRef.current
+        const remaining = limit - currentCount
+        
+        console.log(`📊 Estado actual: ${currentCount}/${limit} PDFs usados. Intentando subir ${filesToProcess} archivos. Quedan ${remaining} disponibles.`)
+        
+        if (filesToProcess > remaining) {
+          console.log(`⛔ LÍMITE EXCEDIDO - Solo quedan ${remaining} PDFs disponibles pero intentas subir ${filesToProcess}`)
+          setShowUpgrade(true)
+          return
+        }
       }
     }
     
     setProcessing(true)
-    let tempCount = localPdfCount || userData?.pdfUploaded || 0
+    
+    // Contador temporal solo para mostrar progreso durante esta sesión de carga
+    let processedInThisSession = 0
     
     for (const file of files) {
-      // Verificar límite ANTES de procesar cada archivo
-      if (user && userData?.accountType === 'free') {
-        if (tempCount >= 5) {
-          console.log(`⛔ Límite alcanzado durante loop: ${tempCount}/5`)
-          setShowUpgrade(true)
-          setProcessing(false)
-          return
-        }
-      }
-      
       try {
         const res = await extractTextFromFile(file, {
           promptForPassword: async (fileName, { attempt }) => prompt(`Contraseña para ${fileName}:`),
@@ -562,12 +578,19 @@ export default function App() {
         if (!user) {
           setGuestUploadCount(prev => prev + 1)
         } else {
-          await incrementPdfCount()
-          tempCount++
-          setLocalPdfCount(tempCount) // Actualizar estado local
-          console.log(`✅ PDF procesado. Contador: ${tempCount}/5`)
+          // Incrementar PRIMERO el contador de referencia localmente
+          pdfCountRef.current += 1
+          processedInThisSession++
+          
+          const limit = userData?.maxPdfLimit || 5
+          console.log(`✅ PDF ${processedInThisSession}/${filesToProcess} procesado exitosamente. Total acumulado: ${pdfCountRef.current}/${limit}`)
+          
+          // Luego actualizar en Firestore pasando el valor actual del contador
+          await incrementPdfCount(pdfCountRef.current - 1)
         }
+        
       } catch (err) {
+        console.error('Error procesando archivo:', err)
         const errorData = { fileName: file.name, extracted: { error: 'Error' }, finalText: 'Error', status: 'En proceso' }
         if (user) {
           await saveInvoice(errorData)
@@ -576,6 +599,8 @@ export default function App() {
         }
       }
     }
+    
+    console.log(`✅ Procesamiento completo: ${processedInThisSession}/${filesToProcess} archivos procesados`)
     setProcessing(false)
   }
 
@@ -699,7 +724,17 @@ export default function App() {
         />
       )}
       
-      <Sidebar results={results} onSelect={setSelectedIndex} onViewChange={setViewMode} currentView={viewMode} selectedIndex={selectedIndex} />
+      <Sidebar 
+        results={results} 
+        onSelect={setSelectedIndex} 
+        onViewChange={setViewMode} 
+        currentView={viewMode} 
+        selectedIndex={selectedIndex}
+        fields={fields}
+        onExportExcel={exportAllToExcel}
+        onReset={handleReset}
+        user={user}
+      />
       <main className="flex-1 p-4">
         <Header 
           onShowLogin={() => setShowLogin(true)}
@@ -712,7 +747,7 @@ export default function App() {
           <div className="lg:col-span-3">
             <DropzoneArea 
               onFiles={handleFiles} 
-              disabled={user && userData?.accountType === 'free' && (localPdfCount >= 5 || (userData?.pdfUploaded || 0) >= 5)}
+              disabled={user && userData?.accountType === 'free' && (userData?.pdfUploaded || 0) >= 5}
               onDisabledClick={() => setShowUpgrade(true)}
             />
             
@@ -797,30 +832,23 @@ export default function App() {
                 ))}
             </div>
           </div>
-          <aside className="bg-white p-4 rounded shadow h-fit">
-            <h4 className="font-bold mb-2">Campos</h4>
-            <ul className="text-sm">{fields.map((f, i) => <li key={i}>• {f.name}</li>)}</ul>
-            <button 
-              onClick={exportAllToExcel} 
-              className={`mt-4 w-full text-white p-2 rounded transition-colors flex items-center justify-center gap-2 ${
-                !user 
-                  ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              {!user ? (
-                <>
-                  <i className="fa-solid fa-lock"></i>
-                  Exportar Excel
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-file-excel"></i>
-                  Exportar Excel
-                </>
-              )}
-            </button>
-            <button onClick={handleReset} className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white p-2 rounded transition-colors">Reiniciar App</button>
+          <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
+            {/* Panel de uso para usuarios free y guests */}
+            <UsagePanel 
+              onUpgrade={() => setShowUpgrade(true)} 
+              onShowRegister={() => setShowRegister(true)}
+            />
+            
+            {/* Anuncio sidebar - Solo para usuarios free y guests - Debajo del panel premium */}
+            {(!user || userData?.accountType === 'free') && (
+              <div className="border-t border-gray-200 pt-4">
+                <AdBanner 
+                  slot="0987654321" 
+                  format="vertical"
+                  style={{ minHeight: '250px' }}
+                />
+              </div>
+            )}
           </aside>
         </div>
       </main>

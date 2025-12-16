@@ -29,11 +29,25 @@ export const AuthProvider = ({ children }) => {
       if (firebaseUser) {
         // Cargar datos del usuario desde Firestore
         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
+        
         if (userDoc.exists()) {
           setUserData(userDoc.data())
+          // Cargar facturas del usuario
+          await loadUserInvoices(firebaseUser.uid)
+        } else {
+          // Usuario eliminado: tiene cuenta de Auth pero no datos en Firestore
+          console.warn('⚠️ Usuario eliminado detectado - cerrando sesión')
+          console.log('🔒 El usuario tiene cuenta de Authentication pero no documento en Firestore')
+          console.log('🚪 Cerrando sesión automáticamente...')
+          
+          // Cerrar sesión automáticamente
+          await signOut(auth)
+          setUserData(null)
+          setUserInvoices([])
+          
+          // Opcional: Mostrar mensaje al usuario
+          alert('Tu cuenta ha sido eliminada. No puedes acceder al sistema.')
         }
-        // Cargar facturas del usuario
-        await loadUserInvoices(firebaseUser.uid)
       } else {
         setUserData(null)
         setUserInvoices([])
@@ -112,7 +126,22 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const firebaseUser = userCredential.user
+      
+      // Verificar si el usuario tiene documento en Firestore
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
+      
+      if (!userDoc.exists()) {
+        // Usuario eliminado: cerrar sesión inmediatamente
+        await signOut(auth)
+        console.warn('⚠️ Intento de login de usuario eliminado')
+        return { 
+          success: false, 
+          error: 'Esta cuenta ha sido eliminada. Contacta al administrador si crees que es un error.' 
+        }
+      }
+      
       return { success: true }
     } catch (error) {
       console.error('Error en login:', error)
@@ -133,6 +162,9 @@ export const AuthProvider = ({ children }) => {
       const userDoc = await getDoc(doc(db, 'users', user.uid))
       
       if (!userDoc.exists()) {
+        // Verificar si es una cuenta eliminada intentando re-registrarse
+        // En ese caso, permitir crear un nuevo documento
+        
         // Crear documento de usuario en Firestore para nuevos usuarios de Google
         const nameParts = user.displayName ? user.displayName.split(' ') : ['', '']
         const now = new Date()
@@ -178,12 +210,15 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const incrementPdfCount = async () => {
+  const incrementPdfCount = async (currentCount = null) => {
     if (!user) return
     try {
       const now = new Date()
       const weekStartDate = userData?.weekStartDate ? new Date(userData.weekStartDate) : now
       const daysSinceWeekStart = (now - weekStartDate) / (1000 * 60 * 60 * 24)
+      
+      // Usar el contador proporcionado o el de userData
+      const actualCurrentCount = currentCount !== null ? currentCount : (userData?.pdfUploaded || 0)
       
       // Si han pasado 7 días o más, resetear el contador
       if (daysSinceWeekStart >= 7) {
@@ -200,9 +235,10 @@ export const AuthProvider = ({ children }) => {
           updatedAt: now.toISOString()
         }))
         console.log('✅ Contador reseteado a 1 (nueva semana)')
+        return 1
       } else {
-        // Incrementar normalmente
-        const newCount = (userData?.pdfUploaded || 0) + 1
+        // Incrementar normalmente usando el contador actual proporcionado
+        const newCount = actualCurrentCount + 1
         await setDoc(doc(db, 'users', user.uid), {
           pdfUploaded: newCount,
           updatedAt: now.toISOString()
@@ -213,10 +249,12 @@ export const AuthProvider = ({ children }) => {
           pdfUploaded: newCount,
           updatedAt: now.toISOString()
         }))
-        console.log(`✅ Contador incrementado a ${newCount}`)
+        console.log(`✅ Firestore actualizado a ${newCount}`)
+        return newCount
       }
     } catch (error) {
       console.error('Error incrementando contador:', error)
+      return null
     }
   }
 
@@ -419,11 +457,57 @@ export const AuthProvider = ({ children }) => {
     if (!isAdmin()) return { success: false, error: 'No autorizado' }
     
     try {
-      await deleteDoc(doc(db, 'users', userId))
-      return { success: true }
+      console.log(`🗑️ Iniciando eliminación completa del usuario: ${userId}`)
+      
+      // 1. Obtener datos del usuario antes de borrar
+      const userDoc = await getDoc(doc(db, 'users', userId))
+      const userData = userDoc.exists() ? userDoc.data() : {}
+      const userEmail = userData?.email || 'Email desconocido'
+      
+      // 2. Borrar todas las facturas/PDFs del usuario
+      console.log(`📄 Buscando facturas del usuario...`)
+      const invoicesQuery = query(
+        collection(db, 'invoices'),
+        where('userId', '==', userId)
+      )
+      const invoicesSnapshot = await getDocs(invoicesQuery)
+      
+      console.log(`📊 Encontradas ${invoicesSnapshot.size} facturas`)
+      
+      const deletePromises = []
+      invoicesSnapshot.forEach(invoiceDoc => {
+        deletePromises.push(deleteDoc(invoiceDoc.ref))
+      })
+      
+      if (deletePromises.length > 0) {
+        await Promise.all(deletePromises)
+        console.log(`✅ ${invoicesSnapshot.size} facturas eliminadas`)
+      }
+      
+      // 3. Borrar documento del usuario en Firestore
+      if (userDoc.exists()) {
+        await deleteDoc(doc(db, 'users', userId))
+        console.log(`✅ Documento de Firestore eliminado`)
+      }
+      
+      // Nota: La cuenta de Firebase Authentication no se puede borrar desde el cliente
+      // por seguridad. Solo se puede borrar con Admin SDK en el backend.
+      // Sin embargo, sin el documento en Firestore, el usuario no podrá usar la app.
+      
+      console.log(`🎉 Usuario ${userEmail} (${userId}) eliminado de Firestore y facturas borradas`)
+      console.log(`⚠️ NOTA: La cuenta de Authentication permanece pero no puede acceder sin datos en Firestore`)
+      
+      return { 
+        success: true, 
+        message: `Usuario ${userEmail} eliminado completamente`,
+        deletedInvoices: invoicesSnapshot.size
+      }
     } catch (error) {
-      console.error('Error eliminando usuario:', error)
-      return { success: false, error: error.message }
+      console.error('❌ Error eliminando usuario:', error)
+      return { 
+        success: false, 
+        error: error.message || 'Error al eliminar usuario completamente' 
+      }
     }
   }
 
@@ -537,11 +621,66 @@ export const AuthProvider = ({ children }) => {
     if (!isAdmin()) return { success: false, error: 'No autorizado' }
     
     try {
+      // Validar que se proporcione una contraseña
+      if (!userData.password || userData.password.length < 6) {
+        return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
+      }
+
+      // Guardar el usuario admin actual antes de crear el nuevo
+      const currentUser = auth.currentUser
+      const currentEmail = currentUser?.email
+      
+      console.log(`👤 Admin actual: ${currentEmail}`)
+      console.log(`🆕 Creando nuevo usuario: ${userData.email}`)
+
+      let newUserId = null
+      let isRecreatingUser = false
+
+      try {
+        // 1. Intentar crear usuario en Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password)
+        const newUser = userCredential.user
+        newUserId = newUser.uid
+        
+        console.log(`✅ Usuario creado en Auth: ${newUserId}`)
+      } catch (authError) {
+        if (authError.code === 'auth/email-already-in-use') {
+          // El email ya existe en Auth - podría ser una cuenta eliminada
+          console.log(`⚠️ Email ya registrado en Auth, intentando recrear documento...`)
+          
+          // Intentar iniciar sesión con esas credenciales para obtener el UID
+          try {
+            const loginResult = await signInWithEmailAndPassword(auth, userData.email, userData.password)
+            newUserId = loginResult.user.uid
+            isRecreatingUser = true
+            console.log(`✅ Cuenta encontrada, UID: ${newUserId}`)
+            
+            // Verificar si ya tiene documento en Firestore
+            const existingDoc = await getDoc(doc(db, 'users', newUserId))
+            if (existingDoc.exists()) {
+              await signOut(auth)
+              return { success: false, error: 'Este usuario ya existe y está activo' }
+            }
+            
+            console.log(`✅ Recreando usuario eliminado...`)
+          } catch (loginError) {
+            // Las credenciales no coinciden
+            await signOut(auth) // Asegurar logout
+            return { 
+              success: false, 
+              error: 'El email ya está registrado con otra contraseña. Usa la contraseña original o elimina la cuenta primero.' 
+            }
+          }
+        } else {
+          throw authError // Re-lanzar otros errores
+        }
+      }
+      
+      // 2. Crear/Recrear documento en Firestore
       const now = new Date()
-      const userRef = doc(collection(db, 'users'))
       const isPrivilegedRole = userData.role === 'reina' || userData.role === 'admin'
       
-      await setDoc(userRef, {
+      await setDoc(doc(db, 'users', newUserId), {
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -559,10 +698,35 @@ export const AuthProvider = ({ children }) => {
         createdAt: now.toISOString(),
         updatedAt: now.toISOString()
       })
-      return { success: true, userId: userRef.id }
+      
+      console.log(`✅ Documento ${isRecreatingUser ? 'recreado' : 'creado'} en Firestore`)
+      
+      // 3. IMPORTANTE: Cerrar sesión del nuevo usuario
+      await signOut(auth)
+      console.log(`🚪 Sesión del nuevo usuario cerrada`)
+      
+      // 4. El admin tendrá que volver a loguearse manualmente
+      console.log(`⚠️ El admin debe volver a iniciar sesión`)
+      
+      return { 
+        success: true, 
+        userId: newUserId,
+        requiresRelogin: true,
+        message: isRecreatingUser 
+          ? 'Usuario recreado exitosamente. Por favor, vuelve a iniciar sesión con tu cuenta de administrador.'
+          : 'Usuario creado exitosamente. Por favor, vuelve a iniciar sesión con tu cuenta de administrador.'
+      }
     } catch (error) {
       console.error('Error creando usuario:', error)
-      return { success: false, error: error.message }
+      let errorMessage = error.message
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'El email ya está registrado'
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Email inválido'
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'La contraseña es muy débil'
+      }
+      return { success: false, error: errorMessage }
     }
   }
 
