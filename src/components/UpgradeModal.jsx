@@ -16,9 +16,9 @@ export default function UpgradeModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4 p-8 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         {success ? (
-          <div className="text-center py-8">
+          <div className="text-center py-8 px-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
               <i className="fa-solid fa-check text-green-600 text-4xl"></i>
             </div>
@@ -36,18 +36,21 @@ export default function UpgradeModal({ onClose }) {
           />
         ) : (
           <>
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mb-4">
-                <i className="fa-solid fa-crown text-white text-3xl"></i>
+            {/* Header con gradiente */}
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-6 rounded-t-lg">
+              <div className="flex items-center justify-center gap-3">
+                <i className="fa-solid fa-crown text-3xl"></i>
+                <h2 className="text-3xl font-bold">
+                  Actualiza a Premium
+                </h2>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Actualiza a Premium
-              </h2>
-              <p className="text-gray-600">
+              <p className="text-center text-yellow-50 mt-2">
                 Desbloquea todo el potencial de PDF Extractor
               </p>
             </div>
 
+            {/* Contenido */}
+            <div className="p-8">
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-6">
               <div className="text-center mb-4">
                 <span className="text-4xl font-bold text-gray-900">$8.99</span>
@@ -92,7 +95,7 @@ export default function UpgradeModal({ onClose }) {
 
               <button
                 onClick={onClose}
-                className="w-full py-2 text-gray-600 hover:text-gray-800 font-medium"
+                className="w-full py-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium rounded-lg transition-all"
               >
                 Cancelar
               </button>
@@ -103,6 +106,7 @@ export default function UpgradeModal({ onClose }) {
                 <i className="fa-solid fa-shield-alt mr-2"></i>
                 Pago seguro procesado por <strong>MercadoPago</strong>. Cancela cuando quieras.
               </p>
+            </div>
             </div>
           </>
         )}

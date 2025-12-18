@@ -14,9 +14,9 @@ export default function UsagePanel({ onUpgrade, onShowRegister }) {
   // Panel para usuarios GUEST (sin login)
   if (!user) {
     return (
-      <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border-2 border-green-200 p-6 shadow-lg">
+      <div className="bg-gradient-to-br from-green-50/80 to-blue-50/80 backdrop-blur-xl rounded-2xl border-2 border-green-200/40 p-6 shadow-2xl">
         <div className="text-center mb-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full mb-3">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full mb-3 shadow-lg">
             <i className="fa-solid fa-user-plus text-white text-2xl"></i>
           </div>
           <h3 className="text-lg font-bold text-gray-900">
@@ -26,7 +26,7 @@ export default function UsagePanel({ onUpgrade, onShowRegister }) {
         </div>
 
         {/* Beneficios de registrarse */}
-        <div className="bg-white rounded-lg p-4 mb-4 border border-green-100">
+        <div className="bg-white/60 backdrop-blur-md rounded-xl p-4 mb-4 border border-green-100/40 shadow-lg">
           <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
             <i className="fa-solid fa-gift text-green-500"></i>
             Beneficios al Registrarte
@@ -82,7 +82,7 @@ export default function UsagePanel({ onUpgrade, onShowRegister }) {
   const percentage = (uploaded / limit) * 100
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 p-6 shadow-lg">
+    <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-xl rounded-2xl border-2 border-blue-200/40 p-6 shadow-2xl">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -91,7 +91,7 @@ export default function UsagePanel({ onUpgrade, onShowRegister }) {
           </h3>
           <p className="text-sm text-gray-600 mt-1">Plan Gratuito</p>
         </div>
-        <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
+        <div className="bg-white/70 backdrop-blur-md rounded-xl px-3 py-2 shadow-lg border border-white/40">
           <p className="text-xs text-gray-500">PDFs procesados</p>
           <p className="text-2xl font-bold text-blue-600">{uploaded}/{limit}</p>
         </div>

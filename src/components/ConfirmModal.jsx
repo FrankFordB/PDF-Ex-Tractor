@@ -101,7 +101,7 @@ export default function ConfirmModal({
           {showCancel && (
             <button
               onClick={onCancel}
-              className="flex-1 px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-lg transition-colors"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-medium rounded-lg transition-all"
             >
               <i className="fa-solid fa-times mr-2"></i>
               {cancelText}

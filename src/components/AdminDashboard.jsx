@@ -4,6 +4,7 @@ import ConfirmModal from './ConfirmModal'
 
 export default function AdminDashboard({ onClose }) {
   const { getAllUsers, updateUserSubscription, updateUserRole, setPremiumDays, cancelPremium, deleteUser, updateUserProfileByAdmin, createUserByAdmin, isAdmin, isSuperAdmin, getPremiumNotifications, markNotificationAsRead, removePremiumGrantedByAdmin } = useAuth()
+  // onClose se mantiene para compatibilidad pero ya no se usa para cerrar modal
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, free, premium
@@ -17,6 +18,8 @@ export default function AdminDashboard({ onClose }) {
   const [activeTab, setActiveTab] = useState('users') // users, notifications
   const [notificationTab, setNotificationTab] = useState('unread') // unread, read
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })
+  const [usersPerPage, setUsersPerPage] = useState(25)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     loadUsers()
@@ -275,6 +278,17 @@ export default function AdminDashboard({ onClose }) {
     revenue: (users || []).filter(u => u.accountType === 'premium').length * 9200 // ARS por mes
   }
 
+  // Paginación
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage)
+  const startIndex = (currentPage - 1) * usersPerPage
+  const endIndex = startIndex + usersPerPage
+  const paginatedUsers = usersPerPage === -1 ? filteredUsers : filteredUsers.slice(startIndex, endIndex)
+
+  // Resetear a página 1 cuando cambia el filtro o búsqueda
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filter, searchTerm, usersPerPage])
+
   if (!isAdmin()) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -296,10 +310,10 @@ export default function AdminDashboard({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full my-8">
+    <>
+      <div className="bg-white rounded-lg shadow-xl w-full my-4">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-3xl font-bold mb-2">
@@ -308,15 +322,9 @@ export default function AdminDashboard({ onClose }) {
               </h2>
               <p className="text-blue-100">Gestión de usuarios y suscripciones</p>
             </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:bg-white hover:bg-opacity-20 w-10 h-10 rounded-full transition-colors"
-            >
-              <i className="fa-solid fa-times text-2xl"></i>
-            </button>
           </div>
         </div>
-
+        
         {/* Stats */}
         <div className="p-6 bg-gray-50 border-b">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -460,6 +468,19 @@ export default function AdminDashboard({ onClose }) {
               >
                 Premium ({stats.premium})
               </button>
+              
+              {/* Selector de usuarios por página */}
+              <select
+                value={usersPerPage}
+                onChange={(e) => setUsersPerPage(parseInt(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={10}>10 por página</option>
+                <option value={25}>25 por página</option>
+                <option value={50}>50 por página</option>
+                <option value={100}>100 por página</option>
+                <option value={-1}>Todos</option>
+              </select>
             </div>
           </div>
 
@@ -474,7 +495,7 @@ export default function AdminDashboard({ onClose }) {
 
         {/* Contenido Central - Cambia según la pestaña activa */}
         {activeTab === 'users' ? (
-          <div className="p-6 max-h-96 overflow-y-auto">
+          <div className="p-6">
           {loading ? (
             <div className="text-center py-12">
               <i className="fa-solid fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
@@ -499,7 +520,7 @@ export default function AdminDashboard({ onClose }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredUsers.map((user) => (
+                  {paginatedUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -624,6 +645,48 @@ export default function AdminDashboard({ onClose }) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {/* Controles de Paginación */}
+          {!loading && filteredUsers.length > 0 && usersPerPage !== -1 && (
+            <div className="mt-6 flex items-center justify-between border-t pt-4">
+              <div className="text-sm text-gray-600">
+                Mostrando {startIndex + 1} a {Math.min(endIndex, filteredUsers.length)} de {filteredUsers.length} usuarios
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                >
+                  <i className="fa-solid fa-angles-left"></i>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                >
+                  <i className="fa-solid fa-chevron-left"></i>
+                </button>
+                <span className="px-4 py-1 bg-blue-600 text-white rounded text-sm font-medium">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                >
+                  <i className="fa-solid fa-chevron-right"></i>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                >
+                  <i className="fa-solid fa-angles-right"></i>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1172,17 +1235,11 @@ export default function AdminDashboard({ onClose }) {
         )}
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-gray-50 border-t p-4">
+        <div className="bg-gray-50 border-t p-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">
               Mostrando {filteredUsers.length} de {users.length} usuarios
             </p>
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-            >
-              Cerrar
-            </button>
           </div>
         </div>
       </div>
@@ -1197,7 +1254,7 @@ export default function AdminDashboard({ onClose }) {
         onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
         showCancel={true}
       />
-    </div>
+    </>
   )
 }
 

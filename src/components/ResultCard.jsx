@@ -35,7 +35,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
   }
 
   return (
-    <div className="bg-white p-3 sm:p-4 rounded shadow mb-4 border border-gray-200 relative">
+    <div className="bg-white/60 backdrop-blur-xl p-3 sm:p-4 rounded-2xl shadow-2xl mb-4 border border-white/30 relative hover:bg-white/70 transition-all">
       {/* Banner superior clickeable para usuarios invitados */}
       {isGuest && (
         <div className="mb-4 -mt-3 -mx-3 sm:-mx-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-t cursor-pointer hover:from-blue-700 hover:to-purple-700 transition-all" onClick={onShowLogin}>
@@ -80,7 +80,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
               }
             }}
             title="Previsualizar PDF real"
-            className="flex-1 sm:flex-none px-2 sm:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2">
+            className="flex-1 sm:flex-none px-2 sm:px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 transition-all">
             <i className="fa-solid fa-magnifying-glass-plus" aria-hidden></i>
             <span className="hidden sm:inline">Ver</span>
           </button>
@@ -94,10 +94,10 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
             }}
             className={`flex-1 sm:flex-none px-2 sm:px-3 py-1 rounded text-white text-xs sm:text-sm font-medium transition-all ${
               isGuest 
-                ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 cursor-pointer' 
                 : item.status === 'Finalizada' 
-                  ? 'bg-green-500 hover:bg-gray-600' 
-                  : 'bg-green-600 hover:bg-green-700'
+                  ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700' 
+                  : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
             }`}>
             {isGuest ? (
               <>
@@ -111,7 +111,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
           
           <button
             onClick={() => onDelete(index)}
-            className="flex-1 sm:flex-none px-2 sm:px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs sm:text-sm font-medium transition-all"
+            className="flex-1 sm:flex-none px-2 sm:px-3 py-1 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded text-xs sm:text-sm font-medium transition-all"
           >
             Eliminar
           </button>
@@ -140,12 +140,12 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
                   e.stopPropagation()
                   handleCopyField(fieldName, fieldValue)
                 }}
-                className={`w-full sm:w-auto px-3 py-1 sm:py-2 rounded text-white text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 min-w-[70px] ${
+                className={`w-full sm:w-auto px-3 py-1 sm:py-2 rounded text-white text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 min-w-[70px] transition-all ${
                   isGuest 
-                    ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 cursor-pointer'
                     : copiedField === fieldName
-                    ? 'bg-green-500 hover:bg-green-600'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                    : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700'
                 }`}
               >
                 {isGuest ? <><i className="fa-solid fa-lock mr-1"></i>Copiar</> : copiedField === fieldName ? '✓' : 'Copiar'}
@@ -158,12 +158,12 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
       {/* Botón copiar todo */}
       <button
         onClick={handleCopyAll}
-        className={`w-full px-4 py-2 rounded text-white font-medium text-xs sm:text-sm ${
+        className={`w-full px-4 py-2 rounded text-white font-medium text-xs sm:text-sm transition-all ${
           isGuest
-            ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 cursor-pointer'
             : copiedField === 'all' 
-            ? 'bg-green-500 hover:bg-green-600' 
-            : 'bg-blue-600 hover:bg-blue-700'
+            ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600' 
+            : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700'
         } ${highlighted ? 'ring-2 ring-blue-400' : ''}`}
       >
         {copiedField === 'all' ? '✓ Copiado todo' : 'Copiar Todo'}
@@ -178,8 +178,8 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
                 <div className="font-semibold">{item.fileName}</div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { navigator.clipboard.writeText(item.finalText || '') }} className="px-3 py-1 bg-blue-600 text-white rounded">Copiar todo</button>
-                <button onClick={() => setShowPreview(false)} className="px-3 py-1 bg-gray-300 hover:bg-gray-200 rounded">Cerrar</button>
+                <button onClick={() => { navigator.clipboard.writeText(item.finalText || '') }} className="px-3 py-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded transition-all">Copiar todo</button>
+                <button onClick={() => setShowPreview(false)} className="px-3 py-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded transition-all">Cerrar</button>
               </div>
             </div>
 

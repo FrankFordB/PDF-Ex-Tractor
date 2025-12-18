@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import AdBanner from './AdBanner'
 
 export default function Sidebar({ results = [], onSelect, onViewChange, currentView = 'enProceso', selectedIndex, fields = [], onExportExcel, onReset, user }) {
+	const [isCollapsed, setIsCollapsed] = useState(false)
 	const finalizadas = results.map((r, i) => ({ ...r, i })).filter(r => r.status === 'Finalizada')
 	const enProceso = results.map((r, i) => ({ ...r, i })).filter(r => r.status !== 'Finalizada')
 
@@ -12,17 +14,30 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 	}
 
 	return (
-		<aside className="w-full md:w-72 bg-white shadow md:h-screen p-3 md:p-4 overflow-auto md:overflow-y-auto">
-			<div className="mb-4">
-				<h2 className="text-lg md:text-xl font-bold">PDF Ex-Tractor</h2>
-				<p className="text-xs md:text-sm text-gray-500">Dashboard</p>
-			</div>
+		<aside className={`relative bg-white/70 backdrop-blur-xl shadow-2xl border-r border-white/20 overflow-auto md:overflow-y-auto transition-all duration-300 ${
+			isCollapsed ? 'w-0 md:w-12 p-0' : 'w-full md:w-72 p-3 md:p-4'
+		}`}>
+			{/* Botón de colapsar/expandir */}
+			<button
+				onClick={() => setIsCollapsed(!isCollapsed)}
+				className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-full shadow-lg transition-all"
+				title={isCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
+			>
+				<i className={`fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-left'}`}></i>
+			</button>
+
+			{!isCollapsed && (
+				<>
+					<div className="mb-4">
+						<h2 className="text-lg md:text-xl font-bold">PDF Ex-Tractor</h2>
+						<p className="text-xs md:text-sm text-gray-500">Dashboard</p>
+					</div>
 
 			<div className="mb-4 flex gap-2">
-				<button onClick={() => onViewChange && onViewChange('enProceso')} className={`flex-1 px-2 py-1 rounded text-xs md:text-sm font-medium transition-all ${currentView === 'enProceso' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>
+				<button onClick={() => onViewChange && onViewChange('enProceso')} className={`flex-1 px-2 py-1 rounded text-xs md:text-sm font-medium transition-all ${currentView === 'enProceso' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white' : 'bg-gray-100'}`}>
 					En proceso ({enProceso.length})
 				</button>
-				<button onClick={() => onViewChange && onViewChange('finalizadas')} className={`flex-1 px-2 py-1 rounded text-xs md:text-sm font-medium transition-all ${currentView === 'finalizadas' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>
+				<button onClick={() => onViewChange && onViewChange('finalizadas')} className={`flex-1 px-2 py-1 rounded text-xs md:text-sm font-medium transition-all ${currentView === 'finalizadas' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white' : 'bg-gray-100'}`}>
 					Finalizadas ({finalizadas.length})
 				</button>
 			</div>
@@ -70,10 +85,10 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 				</ul>
 				<button 
 					onClick={onExportExcel} 
-					className={`w-full text-white p-2 rounded transition-colors flex items-center justify-center gap-2 text-sm ${
+					className={`w-full text-white p-2 rounded transition-all flex items-center justify-center gap-2 text-sm ${
 						!user 
-							? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
-							: 'bg-green-600 hover:bg-green-700'
+							? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 cursor-pointer' 
+							: 'bg-gradient-to-r from-green-600 to-teal-500 hover:from-green-700 hover:to-teal-600'
 					}`}
 				>
 					{!user ? (
@@ -90,7 +105,7 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 				</button>
 				<button 
 					onClick={onReset} 
-					className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white p-2 rounded transition-colors text-sm flex items-center justify-center gap-2"
+					className="mt-2 w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white p-2 rounded transition-all text-sm flex items-center justify-center gap-2"
 				>
 					<i className="fa-solid fa-rotate-left"></i>
 					Reiniciar App
@@ -101,7 +116,7 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 					<>
 						<div className="mt-4 border-t border-gray-200 pt-4">
 							<AdBanner 
-								slot="9578186043" 
+								zoneId="ZONE_1_ID" 
 								format="auto"
 								style={{ minHeight: '90px' }}
 							/>
@@ -109,7 +124,7 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 						
 						<div className="mt-4">
 							<AdBanner 
-								slot="6109714326" 
+								zoneId="ZONE_2_ID" 
 								format="auto"
 								style={{ minHeight: '90px' }}
 							/>
@@ -117,7 +132,7 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 						
 						<div className="mt-4">
 							<AdBanner 
-								slot="6768189872" 
+								zoneId="ZONE_3_ID" 
 								format="auto"
 								style={{ minHeight: '90px' }}
 							/>
@@ -125,6 +140,8 @@ export default function Sidebar({ results = [], onSelect, onViewChange, currentV
 					</>
 				)}
 			</div>
+				</>
+			)}
 		</aside>
 	)
 }

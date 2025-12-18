@@ -96,15 +96,26 @@ export default function RegisterModal({ onClose, onSwitchToLogin }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm overflow-y-auto p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full my-8 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Crear Cuenta - Gratis</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <i className="fa-solid fa-times text-xl"></i>
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 my-8 overflow-hidden">
+        {/* Header con gradiente */}
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <i className="fa-solid fa-user-plus"></i>
+                Crear Cuenta Gratis
+              </h2>
+              <p className="text-purple-100 mt-2 text-sm">Únete y comienza a procesar tus facturas</p>
+            </div>
+            <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 w-10 h-10 rounded-full transition-colors">
+              <i className="fa-solid fa-times text-xl"></i>
+            </button>
+          </div>
         </div>
 
+        {/* Contenido */}
+        <div className="p-8">
         <div className="mb-6 p-4 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
             <i className="fa-solid fa-gift mr-2"></i>
@@ -311,6 +322,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin }) {
             </button>
           </p>
         </div>
+      </div>
       </div>
     </div>
   )

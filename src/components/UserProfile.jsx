@@ -1,13 +1,21 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import ConfirmModal from './ConfirmModal'
 
 export default function UserProfile({ onShowUpgrade, onShowSettings }) {
   const [showMenu, setShowMenu] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const { user, userData, logout, getRemainingUploads } = useAuth()
 
-  const handleLogout = async () => {
-    await logout()
+  const handleLogoutClick = () => {
     setShowMenu(false)
+    setShowLogoutConfirm(true)
+  }
+
+  const handleLogoutConfirm = async () => {
+    await logout()
+    setShowLogoutConfirm(false)
   }
 
   const remaining = getRemainingUploads()
@@ -105,6 +113,45 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
               </button>
             )}
 
+            {/* Sección Blog */}
+            <div className="border-b border-gray-200">
+              <div className="px-4 py-2 bg-gray-50">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Blog</span>
+              </div>
+              <Link
+                to="/blog/organizar-facturas"
+                onClick={() => setShowMenu(false)}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
+              >
+                <i className="fa-solid fa-file-lines text-gray-500"></i>
+                <span className="text-gray-700">Organizar Facturas</span>
+              </Link>
+              <Link
+                to="/blog/beneficios-digitalizacion"
+                onClick={() => setShowMenu(false)}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
+              >
+                <i className="fa-solid fa-chart-line text-gray-500"></i>
+                <span className="text-gray-700">Beneficios de Digitalizar</span>
+              </Link>
+              <Link
+                to="/blog/tipos-comprobantes"
+                onClick={() => setShowMenu(false)}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
+              >
+                <i className="fa-solid fa-receipt text-gray-500"></i>
+                <span className="text-gray-700">Tipos de Comprobantes</span>
+              </Link>
+              <Link
+                to="/blog/consejos-contadores"
+                onClick={() => setShowMenu(false)}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm border-b border-gray-200"
+              >
+                <i className="fa-solid fa-lightbulb text-gray-500"></i>
+                <span className="text-gray-700">Consejos para Contadores</span>
+              </Link>
+            </div>
+
             <button
               onClick={() => {
                 setShowMenu(false)
@@ -116,8 +163,26 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
               <span className="font-medium text-gray-900">Configuración</span>
             </button>
 
+            <Link
+              to="/acerca"
+              onClick={() => setShowMenu(false)}
+              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 border-b border-gray-200"
+            >
+              <i className="fa-solid fa-circle-info text-blue-600"></i>
+              <span className="font-medium text-gray-900">Acerca de</span>
+            </Link>
+
+            <Link
+              to="/ayuda"
+              onClick={() => setShowMenu(false)}
+              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 border-b border-gray-200"
+            >
+              <i className="fa-solid fa-circle-question text-blue-600"></i>
+              <span className="font-medium text-gray-900">Ayuda y Tutorial</span>
+            </Link>
+
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-red-600"
             >
               <i className="fa-solid fa-sign-out-alt"></i>
@@ -126,6 +191,18 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
           </div>
         </>
       )}
+
+      {/* Modal de confirmación de cierre de sesión */}
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        title="Cerrar Sesión"
+        message={`¿Estás seguro que deseas cerrar sesión, ${userData?.firstName}?`}
+        type="warning"
+        confirmText="Sí, cerrar sesión"
+        cancelText="Cancelar"
+        onConfirm={handleLogoutConfirm}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   )
 }

@@ -111,7 +111,7 @@ export default function LoginModal({ onClose, onSwitchToRegister }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors"
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold rounded-lg transition-all"
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>

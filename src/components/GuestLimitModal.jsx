@@ -3,19 +3,24 @@ export default function GuestLimitModal({ uploadCount, onClose, onShowRegister }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 p-8">
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
-            <i className="fa-solid fa-exclamation-triangle text-orange-500 text-3xl"></i>
+      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        {/* Header con gradiente */}
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-full mb-3">
+              <i className="fa-solid fa-exclamation-triangle text-3xl"></i>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">
+              Límite Alcanzado
+            </h2>
+            <p className="text-orange-100">
+              Has alcanzado el límite de 3 PDFs sin registro
+            </p>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Límite Alcanzado
-          </h2>
-          <p className="text-gray-600">
-            Has alcanzado el límite de 3 PDFs sin registro
-          </p>
         </div>
 
+        {/* Contenido */}
+        <div className="p-8">
         <div className="bg-blue-50 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <i className="fa-solid fa-gift text-blue-500"></i>
@@ -65,10 +70,11 @@ export default function GuestLimitModal({ uploadCount, onClose, onShowRegister }
 
           <button
             onClick={onClose}
-            className="w-full py-2 text-gray-600 hover:text-gray-800 font-medium"
+            className="w-full py-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium rounded-lg transition-all"
           >
             Volver
           </button>
+        </div>
         </div>
       </div>
     </div>
