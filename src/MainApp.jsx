@@ -88,7 +88,7 @@ export default function MainApp() {
   const [showGuestLimit, setShowGuestLimit] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
-  const [currentView, setCurrentView] = useState('trabajo') // 'trabajo' o 'admin'
+  const [currentView, setCurrentView] = useState('trabajo') // 'trabajo', 'admin', o 'settings'
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'error' })
   const [guestUploadCount, setGuestUploadCount] = useLocalStorage('guestUploads', 0)
 
@@ -755,7 +755,7 @@ export default function MainApp() {
         onShowLogin={() => setShowLogin(true)}
         onShowRegister={() => setShowRegister(true)}
         onShowUpgrade={() => setShowUpgrade(true)}
-        onShowSettings={() => setShowSettings(true)}
+        onShowSettings={() => setCurrentView('settings')}
         onShowAdmin={() => setCurrentView('admin')}
         currentView={currentView}
         onBackToWork={() => setCurrentView('trabajo')}
@@ -778,6 +778,8 @@ export default function MainApp() {
         <main className="flex-1 p-4">
           {currentView === 'admin' ? (
             <AdminDashboard onClose={() => setCurrentView('trabajo')} />
+          ) : currentView === 'settings' ? (
+            <UserSettingsModal onClose={() => setCurrentView('trabajo')} />
           ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
@@ -917,11 +919,6 @@ export default function MainApp() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Modal de configuración de usuario */}
-      {showSettings && (
-        <UserSettingsModal onClose={() => setShowSettings(false)} />
       )}
 
       {/* Modal de Alerta */}

@@ -70,27 +70,25 @@ export default function UserSettingsModal({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">Configuración de Cuenta</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-            >
-              ×
-            </button>
+    <>
+      <div className="bg-white rounded-lg shadow-xl w-full my-4">
+        <div className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b-2 border-purple-500/30 p-6 rounded-t-lg">
+          <div>
+            <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <i className="fa-solid fa-user-gear mr-3 text-purple-400"></i>
+              Configuración de Cuenta
+            </h2>
+            <p className="text-purple-200/90">Gestiona tu perfil y preferencias</p>
           </div>
           
           {/* Tabs */}
-          <div className="flex gap-4 mt-4 border-b">
+          <div className="flex gap-4 mt-4 border-b border-purple-500/30">
             <button
               onClick={() => setActiveTab('profile')}
               className={`pb-2 px-1 font-medium transition-colors ${
                 activeTab === 'profile'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-purple-400 text-purple-300'
+                  : 'text-purple-200/60 hover:text-purple-200'
               }`}
             >
               <i className="fa-solid fa-user mr-2"></i>
@@ -100,8 +98,8 @@ export default function UserSettingsModal({ onClose }) {
               onClick={() => setActiveTab('billing')}
               className={`pb-2 px-1 font-medium transition-colors ${
                 activeTab === 'billing'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-purple-400 text-purple-300'
+                  : 'text-purple-200/60 hover:text-purple-200'
               }`}
             >
               <i className="fa-solid fa-credit-card mr-2"></i>
@@ -111,8 +109,8 @@ export default function UserSettingsModal({ onClose }) {
               onClick={() => setActiveTab('preferences')}
               className={`pb-2 px-1 font-medium transition-colors ${
                 activeTab === 'preferences'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-purple-400 text-purple-300'
+                  : 'text-purple-200/60 hover:text-purple-200'
               }`}
             >
               <i className="fa-solid fa-cog mr-2"></i>
@@ -149,92 +147,97 @@ export default function UserSettingsModal({ onClose }) {
                 </div>
               </div>
 
-              <form onSubmit={handleUpdate} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleUpdate} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Nombre</label>
                     <input
                       type="text"
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Apellido</label>
                     <input
                       type="text"
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Teléfono</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">País</label>
                     <input
                       type="text"
                       value={formData.country}
                       onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Provincia</label>
                     <input
                       type="text"
                       value={formData.state}
                       onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Ciudad</label>
                     <input
                       type="text"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
-                {message.text && (
-                  <div className={`p-3 rounded ${
-                    message.type === 'success' ? 'bg-green-50 text-green-800' :
-                    message.type === 'error' ? 'bg-red-50 text-red-800' :
-                    'bg-blue-50 text-blue-800'
-                  }`}>
-                    {message.text}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  {saving ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <i className="fa-solid fa-spinner fa-spin"></i>
-                      Guardando...
-                    </span>
-                  ) : (
-                    'Guardar Cambios'
+                {/* Espacio reservado para mensajes (altura fija) */}
+                <div className="h-16">
+                  {message.text && (
+                    <div className={`p-3 rounded ${
+                      message.type === 'success' ? 'bg-green-50 text-green-800' :
+                      message.type === 'error' ? 'bg-red-50 text-red-800' :
+                      'bg-blue-50 text-blue-800'
+                    }`}>
+                      {message.text}
+                    </div>
                   )}
-                </button>
+                </div>
+
+                <div className="flex justify-center">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-10 text-base rounded-lg transition-colors min-w-[200px]"
+                  >
+                    {saving ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <i className="fa-solid fa-spinner fa-spin"></i>
+                        Guardando...
+                      </span>
+                    ) : (
+                      'Guardar Cambios'
+                    )}
+                  </button>
+                </div>
               </form>
             </div>
           )}
@@ -411,17 +414,17 @@ export default function UserSettingsModal({ onClose }) {
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4 flex gap-3">
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4 flex justify-center gap-3">
           <button
             onClick={handleLogout}
-            className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+            className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-10 text-base rounded-lg transition-colors min-w-[200px]"
           >
             <i className="fa-solid fa-sign-out-alt mr-2"></i>
             Cerrar Sesión
           </button>
           <button
             onClick={onClose}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-10 text-base rounded-lg transition-colors min-w-[200px]"
           >
             Cerrar
           </button>
@@ -558,6 +561,6 @@ export default function UserSettingsModal({ onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }

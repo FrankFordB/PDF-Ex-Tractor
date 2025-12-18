@@ -313,14 +313,14 @@ export default function AdminDashboard({ onClose }) {
     <>
       <div className="bg-white rounded-lg shadow-xl w-full my-4">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
+        <div className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 text-white p-6 rounded-t-lg border-b-2 border-purple-500/30">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-3xl font-bold mb-2">
-                <i className="fa-solid fa-shield-halved mr-3"></i>
+              <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <i className="fa-solid fa-shield-halved mr-3 text-purple-400"></i>
                 Panel de Administración
               </h2>
-              <p className="text-blue-100">Gestión de usuarios y suscripciones</p>
+              <p className="text-purple-200/90">Gestión de usuarios y suscripciones</p>
             </div>
           </div>
         </div>

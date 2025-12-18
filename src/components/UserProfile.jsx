@@ -29,59 +29,59 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-400/40 transition-colors"
       >
         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
           {userData?.firstName?.[0]?.toUpperCase() || 'U'}
         </div>
         <div className="hidden sm:block text-left">
-          <div className="text-sm font-medium text-gray-900">
+          <div className="text-sm font-medium text-white">
             {userData?.firstName} {userData?.lastName}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-purple-200">
             {isSuperAdmin ? (
-              <span className="flex items-center gap-1 text-purple-600 font-semibold">
+              <span className="flex items-center gap-1 text-yellow-300 font-semibold">
                 <i className="fa-solid fa-shield-halved"></i>
                 <span>Super Admin</span>
               </span>
             ) : isAdmin ? (
-              <span className="flex items-center gap-1 text-blue-600 font-semibold">
+              <span className="flex items-center gap-1 text-cyan-300 font-semibold">
                 <i className="fa-solid fa-user-shield"></i>
                 <span>Admin</span>
               </span>
             ) : isReina ? (
-              <span className="flex items-center gap-1 text-pink-600 font-semibold">
+              <span className="flex items-center gap-1 text-pink-300 font-semibold">
                 👑 Reina
               </span>
             ) : isPremium ? (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-yellow-300">
                 {isPremiumGift ? (
                   <>
-                    <i className="fa-solid fa-star text-red-500"></i>
+                    <i className="fa-solid fa-star text-yellow-300"></i>
                     <span>Premium (Regalo)</span>
                   </>
                 ) : (
                   <>
-                    <i className="fa-solid fa-crown text-yellow-500"></i>
+                    <i className="fa-solid fa-crown text-yellow-300"></i>
                     <span>Premium</span>
                   </>
                 )}
               </span>
             ) : (
-              <span>Cuenta Gratuita</span>
+              <span className="text-purple-100">Cuenta Gratuita</span>
             )}
           </div>
         </div>
-        <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+        <i className="fa-solid fa-chevron-down text-purple-200 text-xs"></i>
       </button>
 
       {showMenu && (
         <>
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-[100]"
             onClick={() => setShowMenu(false)}
           ></div>
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-[110]">
             <div className="p-4 border-b border-gray-200">
               <p className="text-sm font-medium text-gray-900">
                 {userData?.email}
@@ -181,13 +181,15 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
               <span className="font-medium text-gray-900">Ayuda y Tutorial</span>
             </Link>
 
-            <button
-              onClick={handleLogoutClick}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-red-600"
-            >
-              <i className="fa-solid fa-sign-out-alt"></i>
-              <span className="font-medium">Cerrar Sesión</span>
-            </button>
+            <div className="px-4 py-3 flex justify-center">
+              <button
+                onClick={handleLogoutClick}
+                className="px-8 py-1.5 hover:bg-red-50 transition-colors flex items-center gap-2 text-red-600 text-sm rounded-lg border border-red-200 hover:border-red-300 min-w-[160px] justify-center"
+              >
+                <i className="fa-solid fa-sign-out-alt"></i>
+                <span className="font-medium">Cerrar Sesión</span>
+              </button>
+            </div>
           </div>
         </>
       )}

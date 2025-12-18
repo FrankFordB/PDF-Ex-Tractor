@@ -7,7 +7,7 @@ export default function Header({ onAddField, fields, onShowLogin, onShowRegister
 
 return (
 <>
-<header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 backdrop-blur-xl shadow-2xl border-b-2 border-purple-500/30">
+<header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 backdrop-blur-xl shadow-2xl border-b-2 border-purple-500/30 relative z-[200]">
 <div className="container mx-auto px-4 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
 <div className="w-full sm:w-auto">
   <Link to="/" className="group">
@@ -21,15 +21,17 @@ return (
 
 
 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
-{isAdmin() && user && currentView === 'admin' && (
+{/* Botón de volver a zona de trabajo cuando está en admin o settings */}
+{user && (currentView === 'admin' || currentView === 'settings') && (
   <button 
     onClick={onBackToWork}
     className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl text-sm font-bold hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-xl"
   >
     <i className="fa-solid fa-file-pdf"></i>
-    PDF Ex-Tractor
+    Zona de Trabajo
   </button>
 )}
+{/* Botón Admin - Visible cuando está en settings o cuando NO está en admin */}
 {isAdmin() && user && currentView !== 'admin' && (
   <button 
     onClick={onShowAdmin}
