@@ -5,6 +5,9 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
   const [copiedField, setCopiedField] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'info' })
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isMovingToFinalized, setIsMovingToFinalized] = useState(false)
+  const [isMovingToInProgress, setIsMovingToInProgress] = useState(false)
 
   const handleCopyField = (fieldName, fieldValue) => {
     if (isGuest) {
@@ -28,6 +31,29 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
     // No usar setTimeout - mantener el estado hasta que copie otro campo
   }
 
+  const handleDeleteWithAnimation = () => {
+    setIsDeleting(true)
+    setTimeout(() => {
+      onDelete(index)
+    }, 250) // Duración reducida para más fluidez
+  }
+
+  const handleToggleWithAnimation = () => {
+    // Si está en proceso, animar hacia finalizadas
+    if (item.status !== 'Finalizada') {
+      setIsMovingToFinalized(true)
+      setTimeout(() => {
+        onToggleStatus && onToggleStatus()
+      }, 800) // Duración de la animación más lenta para mejor visibilidad
+    } else {
+      // Si está finalizada, animar hacia en proceso
+      setIsMovingToInProgress(true)
+      setTimeout(() => {
+        onToggleStatus && onToggleStatus()
+      }, 800)
+    }
+  }
+
   const handleValueClick = () => {
     if (isGuest && onShowLogin) {
       onShowLogin()
@@ -35,7 +61,9 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
   }
 
   return (
-    <div className="bg-white/60 backdrop-blur-xl p-3 sm:p-4 rounded-2xl shadow-2xl mb-4 border border-white/30 relative hover:bg-white/70 transition-all">
+    <div className={`bg-white/60 backdrop-blur-xl p-3 sm:p-4 rounded-2xl shadow-2xl border border-white/30 relative hover:bg-white/70 overflow-hidden ${
+      isDeleting ? 'animate-[slideOut_0.25s_ease-out_forwards]' : isMovingToFinalized ? 'animate-[moveToSidebar_0.8s_ease-in-out_forwards]' : isMovingToInProgress ? 'animate-[moveToInProgress_0.8s_ease-in-out_forwards]' : 'transition-all duration-200'
+    }`}>
       {/* Banner superior clickeable para usuarios invitados */}
       {isGuest && (
         <div className="mb-4 -mt-3 -mx-3 sm:-mx-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-t cursor-pointer hover:from-blue-700 hover:to-purple-700 transition-all" onClick={onShowLogin}>
@@ -90,7 +118,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
                 onShowLogin && onShowLogin()
                 return
               }
-              onToggleStatus && onToggleStatus(item.fileName)
+              handleToggleWithAnimation()
             }}
             className={`flex-1 sm:flex-none px-2 sm:px-3 py-1 rounded text-white text-xs sm:text-sm font-medium transition-all ${
               isGuest 
@@ -110,7 +138,7 @@ export default function ResultCard({ item, onCopy, onDelete, onToggleStatus, ind
           </button>
           
           <button
-            onClick={() => onDelete(index)}
+            onClick={handleDeleteWithAnimation}
             className="flex-1 sm:flex-none px-2 sm:px-3 py-1 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded text-xs sm:text-sm font-medium transition-all"
           >
             Eliminar

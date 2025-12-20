@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import ConfirmModal from './ConfirmModal'
 
-export default function UserProfile({ onShowUpgrade, onShowSettings }) {
+export default function UserProfile({ onShowUpgrade, onShowSettings, onNavigate }) {
   const [showMenu, setShowMenu] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const { user, userData, logout, getRemainingUploads } = useAuth()
@@ -116,40 +116,68 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
             {/* Sección Blog */}
             <div className="border-b border-gray-200">
               <div className="px-4 py-2 bg-gray-50">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Blog</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase">Navegación</span>
               </div>
-              <Link
-                to="/blog/organizar-facturas"
-                onClick={() => setShowMenu(false)}
+              <button
+                onClick={() => {
+                  setShowMenu(false)
+                  onNavigate && onNavigate('ayuda')
+                }}
                 className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
               >
-                <i className="fa-solid fa-file-lines text-gray-500"></i>
-                <span className="text-gray-700">Organizar Facturas</span>
-              </Link>
-              <Link
-                to="/blog/beneficios-digitalizacion"
-                onClick={() => setShowMenu(false)}
+                <i className="fa-solid fa-circle-question text-blue-600"></i>
+                <span className="text-gray-700">Ayuda y Tutorial</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMenu(false)
+                  onNavigate && onNavigate('blog')
+                }}
                 className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
               >
-                <i className="fa-solid fa-chart-line text-gray-500"></i>
-                <span className="text-gray-700">Beneficios de Digitalizar</span>
-              </Link>
-              <Link
-                to="/blog/tipos-comprobantes"
-                onClick={() => setShowMenu(false)}
+                <i className="fa-solid fa-blog text-gray-500"></i>
+                <span className="text-gray-700">Artículos</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMenu(false)
+                  onNavigate && onNavigate('tutoriales')
+                }}
                 className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
               >
-                <i className="fa-solid fa-receipt text-gray-500"></i>
-                <span className="text-gray-700">Tipos de Comprobantes</span>
-              </Link>
-              <Link
-                to="/blog/consejos-contadores"
-                onClick={() => setShowMenu(false)}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm border-b border-gray-200"
+                <i className="fa-solid fa-graduation-cap text-purple-600"></i>
+                <span className="text-gray-700">Tutoriales</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMenu(false)
+                  onNavigate && onNavigate('casos-exito')
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
               >
-                <i className="fa-solid fa-lightbulb text-gray-500"></i>
-                <span className="text-gray-700">Consejos para Contadores</span>
-              </Link>
+                <i className="fa-solid fa-trophy text-yellow-600"></i>
+                <span className="text-gray-700">Casos de Éxito</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMenu(false)
+                  onNavigate && onNavigate('recursos')
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
+              >
+                <i className="fa-solid fa-book text-orange-600"></i>
+                <span className="text-gray-700">Recursos</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMenu(false)
+                  onNavigate && onNavigate('acerca')
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
+              >
+                <i className="fa-solid fa-circle-info text-blue-600"></i>
+                <span className="text-gray-700">Acerca de</span>
+              </button>
             </div>
 
             <button
@@ -162,24 +190,6 @@ export default function UserProfile({ onShowUpgrade, onShowSettings }) {
               <i className="fa-solid fa-cog text-gray-600"></i>
               <span className="font-medium text-gray-900">Configuración</span>
             </button>
-
-            <Link
-              to="/acerca"
-              onClick={() => setShowMenu(false)}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 border-b border-gray-200"
-            >
-              <i className="fa-solid fa-circle-info text-blue-600"></i>
-              <span className="font-medium text-gray-900">Acerca de</span>
-            </Link>
-
-            <Link
-              to="/ayuda"
-              onClick={() => setShowMenu(false)}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 border-b border-gray-200"
-            >
-              <i className="fa-solid fa-circle-question text-blue-600"></i>
-              <span className="font-medium text-gray-900">Ayuda y Tutorial</span>
-            </Link>
 
             <div className="px-4 py-3 flex justify-center">
               <button

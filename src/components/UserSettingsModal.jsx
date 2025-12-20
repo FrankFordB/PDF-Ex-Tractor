@@ -140,7 +140,7 @@ export default function UserSettingsModal({ onClose }) {
                     </span>
                     {userData?.accountType === 'free' && userData?.role !== 'reina' && user?.email !== 'franco_burgoa1@hotmail.com' && (
                       <div className="mt-2 text-sm text-gray-600">
-                        📄 PDFs restantes: <strong>{getRemainingUploads()}/5</strong> esta semana
+                         PDFs restantes: <strong>{getRemainingUploads()}/5</strong> esta semana
                       </div>
                     )}
                   </div>

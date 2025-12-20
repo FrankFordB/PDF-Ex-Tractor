@@ -13,6 +13,7 @@ import AdminDashboard from './components/AdminDashboard'
 import ConfirmModal from './components/ConfirmModal'
 import UsagePanel from './components/UsagePanel'
 import AdBanner from './components/AdBanner'
+import PremiumBenefits from './components/PremiumBenefits'
 import { useAuth } from './contexts/AuthContext'
 import useLocalStorage from './hooks/useLocalStorage'
 import { extractTextFromFile } from './utils/pdfReader'
@@ -89,6 +90,7 @@ export default function MainApp() {
   const [showSettings, setShowSettings] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
   const [currentView, setCurrentView] = useState('trabajo') // 'trabajo', 'admin', o 'settings'
+  const [activeSection, setActiveSection] = useState('trabajo') // 'trabajo', 'ayuda', 'blog', 'acerca'
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'error' })
   const [guestUploadCount, setGuestUploadCount] = useLocalStorage('guestUploads', 0)
 
@@ -625,8 +627,7 @@ export default function MainApp() {
     setProcessing(false)
   }
 
-  const handleToggleStatus = async (idx) => {
-    const invoice = results[idx]
+  const handleToggleStatus = async (invoice) => {
     if (!invoice) return
     
     const newStatus = invoice.status === 'Finalizada' ? 'En proceso' : 'Finalizada'
@@ -635,22 +636,30 @@ export default function MainApp() {
       // Usuario logueado
       if (invoice.id) {
         // Factura ya guardada en Firestore
+        // updateInvoiceStatus ya actualiza userInvoices automáticamente
         await updateInvoiceStatus(invoice.id, newStatus)
       } else {
         // Factura todavía en localResults (esperando guardarse)
-        setLocalResults(prev => {
-          const c = [...prev]
-          if(c[idx]) c[idx] = { ...c[idx], status: newStatus }
-          return c
-        })
+        // Necesitamos encontrarla por fileName y uploadedAt ya que no tiene ID
+        setLocalResults(prev => 
+          prev.map(item => 
+            item.fileName === invoice.fileName && 
+            item.uploadedAt === invoice.uploadedAt
+              ? { ...item, status: newStatus }
+              : item
+          )
+        )
       }
     } else {
-      // Usuario invitado: actualizar localStorage
-      setGuestResults(prev => {
-        const c = [...prev]
-        if(c[idx]) c[idx] = { ...c[idx], status: newStatus }
-        return c
-      })
+      // Usuario invitado: actualizar localStorage por fileName
+      setGuestResults(prev => 
+        prev.map(item => 
+          item.fileName === invoice.fileName && 
+          item.uploadedAt === invoice.uploadedAt
+            ? { ...item, status: newStatus }
+            : item
+        )
+      )
     }
   }
   const handleSelect = (index) => {
@@ -758,7 +767,9 @@ export default function MainApp() {
         onShowSettings={() => setCurrentView('settings')}
         onShowAdmin={() => setCurrentView('admin')}
         currentView={currentView}
-        onBackToWork={() => setCurrentView('trabajo')}
+        onBackToWork={() => { setCurrentView('trabajo'); setActiveSection('trabajo'); }}
+        onNavigate={setActiveSection}
+        activeSection={activeSection}
       />
       
       {/* Content area with sidebar and main */}
@@ -773,13 +784,636 @@ export default function MainApp() {
           onExportExcel={exportAllToExcel}
           onReset={handleReset}
           user={user}
+          onNavigate={setActiveSection}
+          activeSection={activeSection}
         />
         
         <main className="flex-1 p-4">
           {currentView === 'admin' ? (
-            <AdminDashboard onClose={() => setCurrentView('trabajo')} />
+            <AdminDashboard onClose={() => { setCurrentView('trabajo'); setActiveSection('trabajo'); }} />
           ) : currentView === 'settings' ? (
-            <UserSettingsModal onClose={() => setCurrentView('trabajo')} />
+            <UserSettingsModal onClose={() => { setCurrentView('trabajo'); setActiveSection('trabajo'); }} />
+          ) : activeSection === 'ayuda' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-xl rounded-2xl border-2 border-blue-200/40 p-8 shadow-2xl">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6"> Ayuda y Tutorial</h2>
+              
+              <div className="space-y-6 text-gray-700">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-3">Guía paso a paso:</h3>
+                  <ol className="list-decimal list-inside space-y-2 ml-4">
+                    <li><strong>Regístrate o inicia sesión</strong> - Crea tu cuenta gratuita en segundos</li>
+                    <li><strong>Sube tu factura PDF</strong> - Arrastra y suelta o haz clic para seleccionar</li>
+                    <li><strong>Procesamiento automático</strong> - Nuestra IA extrae los datos clave</li>
+                    <li><strong>Verifica los resultados</strong> - Revisa los campos extraídos</li>
+                    <li><strong>Exporta a Excel</strong> - Descarga todos tus datos organizados</li>
+                  </ol>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-3"> Casos de Uso</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+                      <h4 className="font-semibold text-gray-800 mb-2"> Contadores</h4>
+                      <p className="text-sm text-gray-600">Procesa facturas de múltiples clientes eficientemente.</p>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+                      <h4 className="font-semibold text-gray-800 mb-2"> Pequeñas Empresas</h4>
+                      <p className="text-sm text-gray-600">Organiza tus compras y ventas automáticamente.</p>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+                      <h4 className="font-semibold text-gray-800 mb-2"> Analistas Financieros</h4>
+                      <p className="text-sm text-gray-600">Extrae datos para análisis y auditorías con precisión.</p>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+                      <h4 className="font-semibold text-gray-800 mb-2"> Estudiantes</h4>
+                      <p className="text-sm text-gray-600">Aprende mientras practicas con facturas reales.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-3"> Preguntas Frecuentes</h3>
+                  <div className="space-y-3">
+                    <details className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50">
+                      <summary className="font-semibold cursor-pointer">¿Cuántas facturas puedo procesar gratis?</summary>
+                      <p className="mt-2 text-sm text-gray-600">La cuenta gratuita permite 5 PDFs por mes.</p>
+                    </details>
+                    <details className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50">
+                      <summary className="font-semibold cursor-pointer">¿Mis datos están seguros?</summary>
+                      <p className="mt-2 text-sm text-gray-600">Sí, utilizamos Firebase con encriptación SSL.</p>
+                    </details>
+                    <details className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50">
+                      <summary className="font-semibold cursor-pointer">¿Funciona con facturas escaneadas?</summary>
+                      <p className="mt-2 text-sm text-gray-600">Sí, utilizamos OCR para procesar facturas escaneadas.</p>
+                    </details>
+                    <details className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50">
+                      <summary className="font-semibold cursor-pointer">¿Puedo cancelar mi suscripción Premium?</summary>
+                      <p className="mt-2 text-sm text-gray-600">Sí, puedes cancelar en cualquier momento sin penalizaciones.</p>
+                    </details>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border-l-4 border-blue-600 p-6 rounded-r-lg">
+                  <h3 className="text-xl font-bold text-blue-900 mb-3">💡 Consejos para mejores resultados</h3>
+                  <ul className="space-y-2 text-blue-800">
+                    <li>✅ Usa PDFs originales en lugar de escaneos cuando sea posible</li>
+                    <li>✅ Asegúrate de que el PDF no esté protegido con contraseña</li>
+                    <li>✅ Verifica los campos extraídos antes de exportar</li>
+                    <li>✅ Usa nombres descriptivos para organizar tus facturas</li>
+                    <li>✅ Exporta regularmente a Excel para mantener respaldos</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
+            {user && userData?.accountType === 'premium' && (
+              <PremiumBenefits />
+            )}
+            {(!user || userData?.accountType === 'free') && (
+              <UsagePanel 
+                onUpgrade={() => setShowUpgrade(true)} 
+                onShowRegister={() => setShowRegister(true)}
+              />
+            )}
+            {(!user || userData?.accountType === 'free') && (
+              <div className="border-t border-gray-200 pt-4">
+                <AdBanner 
+                  zoneId="ZONE_4_ID" 
+                  format="vertical"
+                  style={{ minHeight: '250px' }}
+                />
+              </div>
+            )}
+          </aside>
+        </div>
+          ) : activeSection === 'blog' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-xl rounded-2xl border-2 border-blue-200/40 p-8 shadow-2xl">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6"> Blog</h2>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <article className="border border-gray-200 rounded-lg p-5 hover:shadow-xl transition-shadow cursor-pointer">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                    Cómo Organizar Facturas Electrónicas Eficientemente
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    La gestión de facturas electrónicas es fundamental para cualquier negocio moderno. 
+                    Una buena organización ahorra tiempo y previene errores costosos.
+                  </p>
+                  <p className="text-xs text-gray-500">5 min de lectura</p>
+                </article>
+                
+                <article className="border border-gray-200 rounded-lg p-5 hover:shadow-xl transition-shadow cursor-pointer">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                    Beneficios de la Digitalización de Documentos Fiscales
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Descubre cómo la digitalización puede transformar tu contabilidad, reducir costos 
+                    y mejorar la eficiencia operativa.
+                  </p>
+                  <p className="text-xs text-gray-500">7 min de lectura</p>
+                </article>
+                
+                <article className="border border-gray-200 rounded-lg p-5 hover:shadow-xl transition-shadow cursor-pointer">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                    Tipos de Comprobantes Fiscales en Argentina
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Guía completa sobre facturas A, B, C y otros comprobantes fiscales que debes conocer 
+                    para cumplir con AFIP.
+                  </p>
+                  <p className="text-xs text-gray-500">6 min de lectura</p>
+                </article>
+                
+                <article className="border border-gray-200 rounded-lg p-5 hover:shadow-xl transition-shadow cursor-pointer">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                    Consejos para Contadores en la Era Digital
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Estrategias y herramientas para modernizar tu estudio contable y ofrecer un mejor 
+                    servicio a tus clientes.
+                  </p>
+                  <p className="text-xs text-gray-500">8 min de lectura</p>
+                </article>
+              </div>
+            </div>
+          </div>
+          <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
+            {user && userData?.accountType === 'premium' && (
+              <PremiumBenefits pdfCount={results.length} />
+            )}
+            {(!user || userData?.accountType === 'free') && (
+              <UsagePanel 
+                onUpgrade={() => setShowUpgrade(true)} 
+                onShowRegister={() => setShowRegister(true)}
+              />
+            )}
+            {(!user || userData?.accountType === 'free') && (
+              <div className="border-t border-gray-200 pt-4">
+                <AdBanner 
+                  zoneId="ZONE_4_ID" 
+                  format="vertical"
+                  style={{ minHeight: '250px' }}
+                />
+              </div>
+            )}
+          </aside>
+        </div>
+          ) : activeSection === 'tutoriales' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-xl rounded-2xl border-2 border-blue-200/40 p-8 shadow-2xl">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6"> Tutoriales Paso a Paso</h2>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-white/60 border border-blue-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">1</span>
+                        Configuración Inicial de tu Cuenta
+                      </h3>
+                      <p className="text-gray-700 mb-4">Aprende a configurar tu cuenta desde cero, personalizar campos de extracción y optimizar el sistema para tu tipo de facturas.</p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li>✓ Crear y verificar tu cuenta</li>
+                        <li>✓ Personalizar campos de extracción</li>
+                        <li>✓ Configurar preferencias de exportación</li>
+                        <li>✓ Integrar con tu sistema contable</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-white/60 border border-blue-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">2</span>
+                        Procesamiento de Facturas por Lotes
+                      </h3>
+                      <p className="text-gray-700 mb-4">Domina el procesamiento masivo de facturas para ahorrar tiempo cuando tienes múltiples documentos.</p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li>✓ Seleccionar múltiples archivos</li>
+                        <li>✓ Organizar por proveedor o fecha</li>
+                        <li>✓ Revisar y corregir en masa</li>
+                        <li>✓ Exportar todo con un click</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-white/60 border border-blue-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">3</span>
+                        Optimización de la Precisión de Extracción
+                      </h3>
+                      <p className="text-gray-700 mb-4">Mejora la precisión del OCR para facturas con formatos complejos o escaneadas.</p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li>✓ Preparar PDFs antes de subir</li>
+                        <li>✓ Ajustar configuración de OCR</li>
+                        <li>✓ Entrenar el sistema con tus facturas</li>
+                        <li>✓ Resolver errores comunes</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-white/60 border border-blue-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">4</span>
+                        Integración con Excel y Sistemas Contables
+                      </h3>
+                      <p className="text-gray-700 mb-4">Conecta PDF Ex-Tractor con tus herramientas contables existentes.</p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li>✓ Exportar a formatos compatibles</li>
+                        <li>✓ Mapear campos personalizados</li>
+                        <li>✓ Automatizar importación</li>
+                        <li>✓ Sincronizar con la nube</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
+                {user && userData?.accountType === 'premium' && (
+                  <PremiumBenefits pdfCount={results.length} />
+                )}
+                {(!user || userData?.accountType === 'free') && (
+                  <UsagePanel 
+                    onUpgrade={() => setShowUpgrade(true)} 
+                    onShowRegister={() => setShowRegister(true)}
+                  />
+                )}
+                {(!user || userData?.accountType === 'free') && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <AdBanner 
+                      zoneId="ZONE_4_ID" 
+                      format="vertical"
+                      style={{ minHeight: '250px' }}
+                    />
+                  </div>
+                )}
+              </aside>
+            </div>
+          ) : activeSection === 'casos-exito' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-xl rounded-2xl border-2 border-blue-200/40 p-8 shadow-2xl">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6"> Casos de Éxito</h2>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+                      <div className="flex items-start gap-4">
+                        <div className="text-4xl"></div>
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-xl mb-2">Estudio Contable González - Buenos Aires</h3>
+                          <p className="text-gray-700 mb-3">
+                            "Antes procesábamos 50 facturas diarias en 8 horas de trabajo. Con PDF Ex-Tractor, ahora procesamos 
+                            200 facturas en el mismo tiempo. Duplicamos nuestros clientes sin aumentar costos."
+                          </p>
+                          <div className="grid md:grid-cols-2 gap-4 mt-4">
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-green-600">+120%</p>
+                              <p className="text-sm text-gray-600">Aumento en facturación</p>
+                            </div>
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-green-600">4x</p>
+                              <p className="text-sm text-gray-600">Más facturas procesadas</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+                      <div className="flex items-start gap-4">
+                        <div className="text-4xl"></div>
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-xl mb-2">Distribuidora MegaSur - Córdoba</h3>
+                          <p className="text-gray-700 mb-3">
+                            "Manejamos 300+ facturas mensuales de proveedores. La extracción manual nos tomaba 2 semanas completas. 
+                            Ahora lo hacemos en 1 día. Reducimos errores de carga del 4% al 0.2%."
+                          </p>
+                          <div className="grid md:grid-cols-2 gap-4 mt-4">
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-blue-600">$18,000</p>
+                              <p className="text-sm text-gray-600">Ahorro anual (USD)</p>
+                            </div>
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-blue-600">95%</p>
+                              <p className="text-sm text-gray-600">Reducción de errores</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+                      <div className="flex items-start gap-4">
+                        <div className="text-4xl"></div>
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-xl mb-2">María López - Diseñadora Freelance</h3>
+                          <p className="text-gray-700 mb-3">
+                            "Como freelancer, odio la parte administrativa. PDF Ex-Tractor me ahorra 5 horas semanales que ahora 
+                            dedico a clientes. El plan gratuito es perfecto para mi volumen."
+                          </p>
+                          <div className="grid md:grid-cols-2 gap-4 mt-4">
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-purple-600">20h</p>
+                              <p className="text-sm text-gray-600">Ahorradas por mes</p>
+                            </div>
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-purple-600">100%</p>
+                              <p className="text-sm text-gray-600">Satisfacción</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-l-4 border-orange-500 p-6 rounded-r-lg">
+                      <div className="flex items-start gap-4">
+                        <div className="text-4xl"></div>
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-xl mb-2">Constructora Del Sur - Mendoza</h3>
+                          <p className="text-gray-700 mb-3">
+                            "Gestionamos 5 obras simultáneas con cientos de facturas por proyecto. PDF Ex-Tractor nos permite 
+                            mantener control por obra y generar reportes por cliente en minutos."
+                          </p>
+                          <div className="grid md:grid-cols-2 gap-4 mt-4">
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-orange-600">500+</p>
+                              <p className="text-sm text-gray-600">Facturas por mes</p>
+                            </div>
+                            <div className="bg-white/70 p-3 rounded">
+                              <p className="text-2xl font-bold text-orange-600">30 min</p>
+                              <p className="text-sm text-gray-600">Para reportes completos</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
+                {user && userData?.accountType === 'premium' && (
+                  <PremiumBenefits pdfCount={results.length} />
+                )}
+                {(!user || userData?.accountType === 'free') && (
+                  <UsagePanel 
+                    onUpgrade={() => setShowUpgrade(true)} 
+                    onShowRegister={() => setShowRegister(true)}
+                  />
+                )}
+                {(!user || userData?.accountType === 'free') && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <AdBanner 
+                      zoneId="ZONE_4_ID" 
+                      format="vertical"
+                      style={{ minHeight: '250px' }}
+                    />
+                  </div>
+                )}
+              </aside>
+            </div>
+          ) : activeSection === 'recursos' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-xl rounded-2xl border-2 border-blue-200/40 p-8 shadow-2xl">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6"> Recursos y Herramientas</h2>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-white/60 border border-indigo-200 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <i className="fa-solid fa-file-excel text-green-600"></i>
+                        Plantillas de Excel
+                      </h3>
+                      <p className="text-gray-700 mb-4">Descarga plantillas pre-configuradas para organizar tus datos extraídos.</p>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded border border-green-200">
+                          <p className="font-semibold text-gray-800 mb-1"> Control de Facturas</p>
+                          <p className="text-xs text-gray-600 mb-2">Plantilla con fórmulas automáticas</p>
+                          <button className="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Descargar</button>
+                        </div>
+                        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded border border-blue-200">
+                          <p className="font-semibold text-gray-800 mb-1"> Gestión de Gastos</p>
+                          <p className="text-xs text-gray-600 mb-2">Con gráficos y reportes</p>
+                          <button className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Descargar</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/60 border border-indigo-200 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <i className="fa-solid fa-book text-purple-600"></i>
+                        Guías Descargables (PDF)
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded border border-purple-200">
+                          <div>
+                            <p className="font-semibold text-gray-800">📘 Guía Completa AFIP 2025</p>
+                            <p className="text-xs text-gray-600">Comprobantes fiscales y regulaciones</p>
+                          </div>
+                          <button className="text-sm bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">PDF</button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-200">
+                          <div>
+                            <p className="font-semibold text-gray-800">📗 Automatización Contable</p>
+                            <p className="text-xs text-gray-600">Mejores prácticas y workflows</p>
+                          </div>
+                          <button className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">PDF</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/60 border border-indigo-200 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <i className="fa-solid fa-video text-red-600"></i>
+                        Video Tutoriales
+                      </h3>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div className="bg-gradient-to-r from-red-50 to-orange-50 p-3 rounded border border-red-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <i className="fa-solid fa-play-circle text-red-600 text-2xl"></i>
+                            <div>
+                              <p className="font-semibold text-gray-800 text-sm">Inicio Rápido</p>
+                              <p className="text-xs text-gray-600">5 minutos</p>
+                            </div>
+                          </div>
+                          <button className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 w-full">Ver Video</button>
+                        </div>
+                        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-3 rounded border border-orange-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <i className="fa-solid fa-play-circle text-orange-600 text-2xl"></i>
+                            <div>
+                              <p className="font-semibold text-gray-800 text-sm">Funciones Avanzadas</p>
+                              <p className="text-xs text-gray-600">12 minutos</p>
+                            </div>
+                          </div>
+                          <button className="text-xs bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 w-full">Ver Video</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/60 border border-indigo-200 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <i className="fa-solid fa-users text-indigo-600"></i>
+                        Comunidad y Soporte
+                      </h3>
+                      <div className="grid md:grid-cols-3 gap-3">
+                        <div className="text-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 rounded border border-blue-200">
+                          <i className="fa-brands fa-whatsapp text-green-600 text-3xl mb-2"></i>
+                          <p className="font-semibold text-gray-800 text-sm">WhatsApp</p>
+                          <p className="text-xs text-gray-600 mb-2">Soporte directo</p>
+                          <button className="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Contactar</button>
+                        </div>
+                        <div className="text-center p-4 bg-gradient-to-b from-purple-50 to-purple-100 rounded border border-purple-200">
+                          <i className="fa-solid fa-envelope text-purple-600 text-3xl mb-2"></i>
+                          <p className="font-semibold text-gray-800 text-sm">Email</p>
+                          <p className="text-xs text-gray-600 mb-2">Consultas técnicas</p>
+                          <button className="text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700">Escribir</button>
+                        </div>
+                        <div className="text-center p-4 bg-gradient-to-b from-indigo-50 to-indigo-100 rounded border border-indigo-200">
+                          <i className="fa-solid fa-comments text-indigo-600 text-3xl mb-2"></i>
+                          <p className="font-semibold text-gray-800 text-sm">Foro</p>
+                          <p className="text-xs text-gray-600 mb-2">Comunidad</p>
+                          <button className="text-xs bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700">Unirse</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
+                {user && userData?.accountType === 'premium' && (
+                  <PremiumBenefits pdfCount={results.length} />
+                )}
+                {(!user || userData?.accountType === 'free') && (
+                  <UsagePanel 
+                    onUpgrade={() => setShowUpgrade(true)} 
+                    onShowRegister={() => setShowRegister(true)}
+                  />
+                )}
+                {(!user || userData?.accountType === 'free') && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <AdBanner 
+                      zoneId="ZONE_4_ID" 
+                      format="vertical"
+                      style={{ minHeight: '250px' }}
+                    />
+                  </div>
+                )}
+              </aside>
+            </div>
+          ) : activeSection === 'acerca' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-xl rounded-2xl border-2 border-blue-200/40 p-8 shadow-2xl">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6"> Acerca de PDF Ex-Tractor</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-3">¿Qué es PDF Ex-Tractor?</h3>
+                  <p className="text-gray-700 leading-relaxed mb-4">
+                    PDF Ex-Tractor es una plataforma SaaS de vanguardia que utiliza inteligencia artificial 
+                    y tecnología OCR para automatizar la extracción de datos desde facturas y comprobantes fiscales.
+                  </p>
+                </div>
+                
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-3"> Características principales:</h3>
+                  <div className="grid md:grid-cols-2 gap-3 text-gray-700 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">✓</span>
+                      <span>Extracción automática de datos</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">✓</span>
+                      <span>Tecnología OCR avanzada</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">✓</span>
+                      <span>Exportación a Excel</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">✓</span>
+                      <span>Almacenamiento en la nube</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">✓</span>
+                      <span>Interfaz intuitiva</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">✓</span>
+                      <span>Procesamiento ilimitado (Premium)</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-3"> ¿Para quién es útil?</h3>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="border-2 border-green-200 rounded-lg p-4 hover:shadow-lg transition-all">
+                      <div className="text-3xl mb-2"></div>
+                      <h4 className="font-semibold text-gray-800 mb-2">Estudios Contables</h4>
+                      <p className="text-xs text-gray-600">Procesa cientos de facturas en minutos.</p>
+                    </div>
+                    <div className="border-2 border-blue-200 rounded-lg p-4 hover:shadow-lg transition-all">
+                      <div className="text-3xl mb-2"></div>
+                      <h4 className="font-semibold text-gray-800 mb-2">PyMEs</h4>
+                      <p className="text-xs text-gray-600">Mantén tu contabilidad al día.</p>
+                    </div>
+                    <div className="border-2 border-purple-200 rounded-lg p-4 hover:shadow-lg transition-all">
+                      <div className="text-3xl mb-2"></div>
+                      <h4 className="font-semibold text-gray-800 mb-2">Freelancers</h4>
+                      <p className="text-xs text-gray-600">Organiza tus ingresos y gastos.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-3"> El Creador</h3>
+                  <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-6">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        FB
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-gray-800">Franco Burgoa</h4>
+                        <p className="text-sm text-blue-600 font-semibold">Desarrollador Full-Stack & Emprendedor</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      Franco es un Desarrollador Full-Stack de software apasionado por resolver problemas reales mediante tecnología. 
+                      PDF Ex-Tractor nació de conversaciones con contadores que dedicaban horas a transcribir facturas.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">React</span>
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">Firebase</span>
+                      <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">AI/ML</span>
+                      <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs">OCR</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
+            {user && userData?.accountType === 'premium' && (
+              <PremiumBenefits pdfCount={results.length} />
+            )}
+            {(!user || userData?.accountType === 'free') && (
+              <UsagePanel 
+                onUpgrade={() => setShowUpgrade(true)} 
+                onShowRegister={() => setShowRegister(true)}
+              />
+            )}
+            {(!user || userData?.accountType === 'free') && (
+              <div className="border-t border-gray-200 pt-4">
+                <AdBanner 
+                  zoneId="ZONE_4_ID" 
+                  format="vertical"
+                  style={{ minHeight: '250px' }}
+                />
+              </div>
+            )}
+          </aside>
+        </div>
           ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
@@ -863,21 +1497,28 @@ export default function MainApp() {
               </div>
             )}
             
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
                 {processing && <p className="text-blue-600">Procesando...</p>}
                 {results.filter(r => viewMode==='finalizadas'?r.status==='Finalizada':r.status!=='Finalizada').map((r, i) => (
-                    <div key={i} id={`result-${i}`}><ResultCard item={r} index={i} onDelete={handleDelete} onToggleStatus={() => handleToggleStatus(i)} highlighted={selectedIndex===i} isGuest={!user} onShowLogin={() => setShowLogin(true)}/></div>
+                    <div key={r.fileName + '-' + i} className="transition-all duration-300 ease-in-out"><ResultCard item={r} index={i} onDelete={handleDelete} onToggleStatus={() => handleToggleStatus(r)} highlighted={selectedIndex===i} isGuest={!user} onShowLogin={() => setShowLogin(true)}/></div>
                 ))}
             </div>
           </div>
           <aside className="bg-white p-4 rounded shadow h-fit space-y-4">
-            {/* Panel de uso para usuarios free y guests */}
-            <UsagePanel 
-              onUpgrade={() => setShowUpgrade(true)} 
-              onShowRegister={() => setShowRegister(true)}
-            />
+            {/* Beneficios Premium para usuarios premium */}
+            {user && userData?.accountType === 'premium' && (
+              <PremiumBenefits pdfCount={results.length} />
+            )}
             
-            {/* Anuncio sidebar - Solo para usuarios free y guests - Debajo del panel premium */}
+            {/* Panel de uso para usuarios free y guests */}
+            {(!user || userData?.accountType === 'free') && (
+              <UsagePanel 
+                onUpgrade={() => setShowUpgrade(true)} 
+                onShowRegister={() => setShowRegister(true)}
+              />
+            )}
+            
+            {/* Anuncio sidebar - Solo para usuarios free y guests */}
             {(!user || userData?.accountType === 'free') && (
               <div className="border-t border-gray-200 pt-4">
                 <AdBanner 

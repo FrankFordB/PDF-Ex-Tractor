@@ -96,8 +96,8 @@ export default function RegisterModal({ onClose, onSwitchToLogin }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 my-8 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header con gradiente */}
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6">
           <div className="flex justify-between items-center">

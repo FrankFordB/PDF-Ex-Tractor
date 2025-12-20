@@ -2,17 +2,17 @@ import { Link } from 'react-router-dom'
 import UserProfile from './UserProfile'
 import { useAuth } from '../contexts/AuthContext'
 
-export default function Header({ onAddField, fields, onShowLogin, onShowRegister, onShowUpgrade, onShowSettings, onShowAdmin, currentView, onBackToWork }) {
+export default function Header({ onAddField, fields, onShowLogin, onShowRegister, onShowUpgrade, onShowSettings, onShowAdmin, currentView, onBackToWork, onNavigate, activeSection }) {
   const { user, isAdmin } = useAuth()
 
 return (
 <>
-<header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 backdrop-blur-xl shadow-2xl border-b-2 border-purple-500/30 relative z-[200]">
+<header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 backdrop-blur-xl shadow-2xl border-b-2 border-purple-500/30 relative z-10">
 <div className="container mx-auto px-4 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
 <div className="w-full sm:w-auto">
   <Link to="/" className="group">
     <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow-2xl group-hover:scale-105 transition-transform">
-      📄 PDF Ex-Tractor
+      PDF Ex-Tractor
     </h1>
   </Link>
   <p className="text-xs sm:text-sm text-purple-200/90">Subí tus facturas y extrae campos automáticamente</p>
@@ -21,8 +21,24 @@ return (
 
 
 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
-{/* Botón de volver a zona de trabajo cuando está en admin o settings */}
-{user && (currentView === 'admin' || currentView === 'settings') && (
+{/* Botón Recursos y Herramientas - Ocultar SOLO cuando está en recursos Y en vista trabajo */}
+{!(activeSection === 'recursos' && currentView === 'trabajo') && (
+  <button 
+    onClick={() => {
+      if (currentView !== 'trabajo') {
+        onBackToWork && onBackToWork()
+      }
+      onNavigate && onNavigate('recursos')
+    }}
+    className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-sm font-bold hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-xl"
+  >
+    <i className="fa-solid fa-book"></i>
+    Recursos y Herramientas
+  </button>
+)}
+
+{/* Botón de volver a zona de trabajo - Visible cuando NO está en zona de trabajo */}
+{activeSection !== 'trabajo' && currentView === 'trabajo' && (
   <button 
     onClick={onBackToWork}
     className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl text-sm font-bold hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-xl"
@@ -31,7 +47,19 @@ return (
     Zona de Trabajo
   </button>
 )}
-{/* Botón Admin - Visible cuando está en settings o cuando NO está en admin */}
+
+{/* Botón de volver a zona de trabajo cuando está en admin o settings */}
+{(currentView === 'admin' || currentView === 'settings') && (
+  <button 
+    onClick={onBackToWork}
+    className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl text-sm font-bold hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-xl"
+  >
+    <i className="fa-solid fa-file-pdf"></i>
+    Zona de Trabajo
+  </button>
+)}
+
+{/* Botón Admin - Visible cuando está en recursos, settings o cuando NO está en admin */}
 {isAdmin() && user && currentView !== 'admin' && (
   <button 
     onClick={onShowAdmin}
@@ -42,7 +70,7 @@ return (
   </button>
 )}
 {user ? (
-  <UserProfile onShowUpgrade={onShowUpgrade} onShowSettings={onShowSettings} />
+  <UserProfile onShowUpgrade={onShowUpgrade} onShowSettings={onShowSettings} onNavigate={onNavigate} />
 ) : (
   <>
     <button 

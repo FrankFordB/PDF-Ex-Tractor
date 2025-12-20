@@ -5,7 +5,7 @@ export default function Ayuda() {
       
       {/* Cómo usar la app */}
       <section className="mb-8">
-        <h2 className="text-2xl font-bold text-blue-600 mb-4">📖 Cómo usar PDF Ex-Tractor</h2>
+        <h2 className="text-2xl font-bold text-blue-600 mb-4">Cómo usar PDF Ex-Tractor</h2>
         <div className="space-y-4 text-gray-700">
           <p className="leading-relaxed">
             PDF Ex-Tractor es una herramienta profesional que automatiza la extracción de datos desde facturas PDF, 
@@ -25,25 +25,25 @@ export default function Ayuda() {
 
       {/* Casos de uso */}
       <section className="mb-8">
-        <h2 className="text-2xl font-bold text-blue-600 mb-4">💼 Casos de Uso</h2>
+        <h2 className="text-2xl font-bold text-blue-600 mb-4">Casos de Uso</h2>
         <div className="grid md:grid-cols-2 gap-6">
           <div className="border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">🏢 Contadores</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Contadores</h3>
             <p className="text-gray-600">Procesa facturas de múltiples clientes de forma eficiente. Reduce el tiempo de contabilización de horas a minutos.</p>
           </div>
           
           <div className="border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">🏪 Pequeñas Empresas</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2"> Pequeñas Empresas</h3>
             <p className="text-gray-600">Organiza tus compras y ventas automáticamente. Mantén tu contabilidad al día sin contratar personal extra.</p>
           </div>
           
           <div className="border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">📊 Analistas Financieros</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2"> Analistas Financieros</h3>
             <p className="text-gray-600">Extrae datos para análisis de gastos, presupuestos y auditorías con precisión y velocidad.</p>
           </div>
           
           <div className="border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">🎓 Estudiantes de Contabilidad</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2"> Estudiantes de Contabilidad</h3>
             <p className="text-gray-600">Aprende mientras practicas con facturas reales. Ideal para proyectos académicos y prácticas profesionales.</p>
           </div>
         </div>
@@ -51,7 +51,7 @@ export default function Ayuda() {
 
       {/* Preguntas frecuentes */}
       <section className="mb-8">
-        <h2 className="text-2xl font-bold text-blue-600 mb-4">❓ Preguntas Frecuentes</h2>
+        <h2 className="text-2xl font-bold text-blue-600 mb-4"> Preguntas Frecuentes</h2>
         <div className="space-y-4">
           <details className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
             <summary className="font-semibold text-gray-800 cursor-pointer">¿Qué tipos de facturas puedo procesar?</summary>

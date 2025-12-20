@@ -2,8 +2,8 @@ import React from 'react'
 
 export default function WelcomeModal({ onClose, userName }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header con gradiente */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6">
           <div className="text-center">

@@ -5,7 +5,7 @@ export default function AcercaDe() {
       
       {/* Qué es la herramienta */}
       <section className="mb-10">
-        <h2 className="text-2xl font-bold text-blue-600 mb-4">🚀 ¿Qué es PDF Ex-Tractor?</h2>
+        <h2 className="text-2xl font-bold text-blue-600 mb-4"> ¿Qué es PDF Ex-Tractor?</h2>
         <p className="text-gray-700 leading-relaxed mb-4">
           PDF Ex-Tractor es una plataforma SaaS (Software as a Service) de vanguardia que utiliza inteligencia artificial 
           y tecnología OCR para automatizar la extracción de datos desde facturas y comprobantes fiscales en formato PDF.
